@@ -2,82 +2,119 @@ import si from 'systeminformation';
 import client from 'prom-client';
 
 interface MetricConfig {
-    name: string;
-    help: string;
-    field: string;
+    metricName: string;
+    description: string;
+    dataField: string;
 };
 
-interface LabelMetricConfig {
-    name: string;
-    help: string;
-    fieldsName: string[];
-    fields: string[];
+interface LabeledMetricConfig {
+    metricName: string;
+    description: string;
+    labelKeys: string[];
+    dataFields: string[];
 }
 
-const GENERAL_METRICS: MetricConfig[] = [
-    { name: 'machine_current', help: 'System local time in milliseconds', field: 'current' },
-    { name: 'machine_uptime', help: 'System uptime in seconds', field: 'uptime' }
+// GENERAL
+const DYNAMIC_GENERAL_METRICS: MetricConfig[] = [
+    { metricName: 'machine_current', description: 'System local time in milliseconds', dataField: 'current' },
+    { metricName: 'machine_uptime', description: 'System uptime in seconds', dataField: 'uptime' }
 ];
 
-const STATIC_GENERAL_METRICS: LabelMetricConfig = {
-    name: 'machine_info',
-    help: 'System TBD',
-    fieldsName: ['timezone', 'timezone_name'],
-    fields: ['timezone', 'timezoneName']
+const STATIC_GENERAL_METRICS: LabeledMetricConfig = {
+    metricName: 'machine_info',
+    description: 'System time related information',
+    labelKeys: ['timezone', 'timezone_name'],
+    dataFields: ['timezone', 'timezoneName']
 };
 
-const MEMORY_METRICS: MetricConfig[] = [
-    { name: 'machine_memory_total', help: 'Total physical memory in bytes', field: 'total' },
-    { name: 'machine_memory_free', help: 'Unused memory in bytes', field: 'free' },
-    { name: 'machine_memory_used', help: 'Currently used memory in bytes', field: 'used' },
-    { name: 'machine_memory_active', help: 'Memory actively in use (excluding buffers/cache)', field: 'active' },
-    { name: 'machine_memory_buffcache', help: 'Memory used for buffers and cache', field: 'buffcache' },
-    { name: 'machine_memory_reclaimable', help: 'Cache memory that can be reclaimed', field: 'reclaimable' },
-    { name: 'machine_memory_available', help: 'Memory available for new processes without swapping', field: 'available' },
-    { name: 'machine_memory_swaptotal', help: 'Total swap space in bytes', field: 'swaptotal' },
-    { name: 'machine_memory_swapused', help: 'Swap space currently in use in bytes', field: 'swapused' },
-    { name: 'machine_memory_swapfree', help: 'Unused swap space in bytes', field: 'swapfree' }
-];
-
-const SYSTEM_HW_METRICS: LabelMetricConfig = {
-    name: 'machine_hw_info',
-    help: 'Static Hardware information',
-    fieldsName: ['version', 'serial', 'uuid'],
-    fields: ['version', 'serial', 'uuid']
+// SYSTEM (HW)
+const STATIC_HW_INFO: LabeledMetricConfig = {
+    metricName: 'machine_hw_info',
+    description: 'Static Hardware information',
+    labelKeys: ['version', 'serial', 'uuid'],
+    dataFields: ['version', 'serial', 'uuid']
 };
 
-const CPU_METRICS: MetricConfig[] = [
-    { name: 'machine_cpu_speed', help: 'Current CPU clock speed in GHz', field: 'speed' },
-    { name: 'machine_cpu_speed_min', help: 'Minimum CPU clock speed in GHz', field: 'speedMin' },
-    { name: 'machine_cpu_speed_max', help: 'Maximum CPU clock speed in GHz (turbo)', field: 'speedMax' },
-    { name: 'machine_cpu_virtualization', help: 'Hardware virtualization enabled/disabled', field: 'virtualization' }
-];
-
-const CPU_TEMPERATURE_METRICS: MetricConfig[] = [
-    { name: 'machine_cpu_main_temperature', help: 'Main/average CPU package temperature in °C', field: 'main' },
-    { name: 'machine_cpu_cores', help: 'Per-core CPU temperatures in °C (array)', field: 'cores' },
-    { name: 'machine_cpu_max', help: 'Maximum reported CPU temperature in °C', field: 'max' },
-    { name: 'machine_cpu_socket', help: 'CPU socket/DTS temperatures in °C (array)', field: 'socket' },
-    { name: 'machine_cpu_chipset', help: 'Chipset temperature in °C (if available)', field: 'chipset' }
-];
-
-const STATIC_CPU_METRICS: LabelMetricConfig = {
-    name: 'machine_cpu_info',
-    help: 'Static CPU information',
-    fieldsName: ['cores', 'physical_cores', 'efficiency_cores', 'performance_cores', 'vendor', 'family', 'model'],
-    fields: ['cores', 'physicalCores', 'efficiencyCores', 'performanceCores', 'vendor', 'family', 'model']
+const STATIC_BASEBOARD_METRICS: LabeledMetricConfig = {
+    metricName: 'machine_baseboard_info',
+    description: 'System baseboard information',
+    labelKeys: ['manufacturer', 'version', 'serial', 'mem_max', 'mem_slots'],
+    dataFields: ['manufacturer', 'version', 'serial', 'memMax', 'memSlots']
 };
 
-async function registerGauge(register: client.Registry, metrics: MetricConfig[], siFunc: Function) {
-    metrics.forEach(({ name, help, field }) => {
+const STATIC_CHASSIS_METRICS: LabeledMetricConfig = {
+    metricName: 'machine_chassis_info',
+    description: 'System chassis information',
+    labelKeys: ['manufacturer', 'chassis', 'type', 'version'],
+    dataFields: ['manufacturer', 'chassis', 'type', 'version']
+};
+
+// CPU
+const DYNAMIC_CPU_METRICS: MetricConfig[] = [
+    { metricName: 'machine_cpu_speed', description: 'Current CPU clock speed in GHz', dataField: 'speed' },
+    { metricName: 'machine_cpu_speed_min', description: 'Minimum CPU clock speed in GHz', dataField: 'speedMin' },
+    { metricName: 'machine_cpu_speed_max', description: 'Maximum CPU clock speed in GHz (turbo)', dataField: 'speedMax' },
+    { metricName: 'machine_cpu_virtualization', description: 'Hardware virtualization enabled/disabled', dataField: 'virtualization' }
+];
+
+const STATIC_CPU_METRICS: LabeledMetricConfig = {
+    metricName: 'machine_cpu_info',
+    description: 'Static CPU information',
+    labelKeys: ['cores', 'physical_cores', 'efficiency_cores', 'performance_cores', 'vendor', 'family', 'model'],
+    dataFields: ['cores', 'physicalCores', 'efficiencyCores', 'performanceCores', 'vendor', 'family', 'model']
+};
+
+const STATIC_CPU_CACHE_METRICS: LabeledMetricConfig = {
+    metricName: 'machine_cpu_cache',
+    description: 'System cpu cache in bytes',
+    labelKeys: ['l1d_size', 'l1i_size', 'l2_size', 'l3_size'],
+    dataFields: ['l1d', 'l1i', 'l2', 'l3']
+}
+
+const DYNAMIC_CPU_TEMPERATURE_METRICS: MetricConfig[] = [
+    { metricName: 'machine_cpu_main_temperature', description: 'Main/average CPU package temperature in °C', dataField: 'main' },
+    { metricName: 'machine_cpu_max', description: 'Maximum reported CPU temperature in °C', dataField: 'max' }
+];
+
+const DYNAMIC_CPU_CURRENT_SPEED_METRICS: MetricConfig[] = [
+    { metricName: 'machine_cpu_current_speed_avg', description: 'Average CPU speed for all cores', dataField: 'avg' },
+    { metricName: 'machine_cpu_current_speed_max', description: 'Max CPU speed for all cores', dataField: 'max' },
+    { metricName: 'machine_cpu_current_speed_min', description: 'Min CPU speed for all cores', dataField: 'min' }
+];
+
+const DYNAMIC_CORE_TEMPERATURE_METRICS: LabeledMetricConfig = {
+    metricName: 'machine_cpu',
+    description: 'CPU core temperatures in °C',
+    labelKeys: ['cores_temperatures'],
+    dataFields: ['cores']
+};
+
+// Battery
+const DYNAMIC_BATTERY_METRICS: MetricConfig[] = 
+
+// MEMORY
+const DYNAMIC_MEMORY_METRICS: MetricConfig[] = [
+    { metricName: 'machine_memory_total', description: 'Total physical memory in bytes', dataField: 'total' },
+    { metricName: 'machine_memory_free', description: 'Unused memory in bytes', dataField: 'free' },
+    { metricName: 'machine_memory_used', description: 'Currently used memory in bytes', dataField: 'used' },
+    { metricName: 'machine_memory_active', description: 'Memory actively in use (excluding buffers/cache)', dataField: 'active' },
+    { metricName: 'machine_memory_buffcache', description: 'Memory used for buffers and cache', dataField: 'buffcache' },
+    { metricName: 'machine_memory_reclaimable', description: 'Cache memory that can be reclaimed', dataField: 'reclaimable' },
+    { metricName: 'machine_memory_available', description: 'Memory available for new processes without swapping', dataField: 'available' },
+    { metricName: 'machine_memory_swaptotal', description: 'Total swap space in bytes', dataField: 'swaptotal' },
+    { metricName: 'machine_memory_swapused', description: 'Swap space currently in use in bytes', dataField: 'swapused' },
+    { metricName: 'machine_memory_swapfree', description: 'Unused swap space in bytes', dataField: 'swapfree' }
+];
+
+async function registerSimpleGauges(register: client.Registry, metrics: MetricConfig[], siFunc: Function) {
+    metrics.forEach(({ metricName, description, dataField }) => {
         new client.Gauge({
-            name,
-            help,
+            name: metricName,
+            help: description,
             async collect() {
                 try {
                     const data: any = await siFunc();
-                    console.info(`Data for ${name}:`);
-                    const val = data[field];
+                    const val = data[dataField];
 
                     if (typeof val == "number") {
                         this.set(val);
@@ -85,13 +122,12 @@ async function registerGauge(register: client.Registry, metrics: MetricConfig[],
                         this.set(val ? 1 : 0);
                     } else {
                         // Log unexpected type and set metric to NaN
-                        console.error(`Unexpected data type for ${name}:`, typeof val, val);
+                        console.error(`Unexpected data type for ${metricName}:`, typeof val, val);
                         this.set(NaN);
                     }
-
                 } catch (err) {
                     // Log error and set metric to NaN so Prometheus knows scrape failed
-                    console.error(`Error collecting ${name}:`, err);
+                    console.error(`Error collecting ${metricName}:`, err);
                     this.set(NaN);
                 }
             },
@@ -100,35 +136,71 @@ async function registerGauge(register: client.Registry, metrics: MetricConfig[],
     });
 }
 
-async function registerGaugeWithLabel(register: client.Registry, metrics: LabelMetricConfig, siFunc: Function) {
+async function registerStaticLabeledGauge(register: client.Registry, metrics: LabeledMetricConfig, siFunc: Function) {
     const guage = new client.Gauge({
-        name: metrics.name,
-        help: metrics.help,
-        labelNames: metrics.fieldsName,
+        name: metrics.metricName,
+        help: metrics.description,
+        labelNames: metrics.labelKeys,
         registers: [register],
     });
     try {
         const data: any = await siFunc();
         const vals = Object.fromEntries(
-            metrics.fieldsName.map((fieldName, idx) => [fieldName, data[metrics.fields[idx] as string]])
-        );
+            metrics.labelKeys.map((fieldName, idx) =>
+                [fieldName, data[metrics.dataFields[idx] as string]]
+            ));
         guage.set(vals, 1);
     } catch (err) {
-        console.error(`Error collecting ${metrics.name}:`, err);
+        console.error(`Error collecting ${metrics.metricName}:`, err);
         guage.reset();
         guage.set(NaN);
     }
 }
 
-export async function registerSysMetrics(register: client.Registry) {
-    const temp = await si.cpuTemperature()
-    await registerGauge(register, MEMORY_METRICS, si.mem);
-    await registerGaugeWithLabel(register, STATIC_GENERAL_METRICS, si.time);
-    await registerGauge(register, GENERAL_METRICS, si.time);
-    await registerGaugeWithLabel(register, STATIC_CPU_METRICS, si.cpu);
-    await registerGauge(register, CPU_METRICS, si.cpu);
-    await registerGauge(register, CPU_TEMPERATURE_METRICS, si.cpuTemperature);
-    await registerGaugeWithLabel(register, SYSTEM_HW_METRICS, si.system);
+async function registerDynamicLabeledGauge(register: client.Registry, metrics: LabeledMetricConfig, siFunc: Function) {
+    const gauge = new client.Gauge({
+        name: metrics.metricName,
+        help: metrics.description,
+        labelNames: metrics.labelKeys,
+        async collect() {
+            try {
+                const data: any = await siFunc();
+                const vals = Object.fromEntries(
+                    metrics.labelKeys.map((fieldName, idx) => [`${fieldName}`, data[metrics.dataFields[idx] as string]])
+                );
+                this.set(vals, 1);
+            } catch (err) {
+                console.error(`Error collecting ${metrics.metricName}:`, err);
+                this.reset();
+                this.set(NaN);
+            }
+        },
+        registers: [register],
+    });
+}
 
+//
+
+export async function registerSysMetrics(register: client.Registry) {
+
+    //General
+    await registerSimpleGauges(register, DYNAMIC_GENERAL_METRICS, si.time);
+    await registerStaticLabeledGauge(register, STATIC_GENERAL_METRICS, si.time);
+
+    //System (HW)
+    await registerStaticLabeledGauge(register, STATIC_HW_INFO, si.system);
+    await registerStaticLabeledGauge(register, STATIC_BASEBOARD_METRICS, si.baseboard);
+    await registerStaticLabeledGauge(register, STATIC_CHASSIS_METRICS, si.chassis);
+
+    //CPU
+    await registerStaticLabeledGauge(register, STATIC_CPU_METRICS, si.cpu);
+    await registerSimpleGauges(register, DYNAMIC_CPU_METRICS, si.cpu);
+    await registerSimpleGauges(register, DYNAMIC_CPU_TEMPERATURE_METRICS, si.cpuTemperature);
+    await registerDynamicLabeledGauge(register, DYNAMIC_CORE_TEMPERATURE_METRICS, si.cpuTemperature)
+    await registerStaticLabeledGauge(register, STATIC_CPU_CACHE_METRICS, si.cpuCache);
+    await registerSimpleGauges(register, DYNAMIC_CPU_CURRENT_SPEED_METRICS, si.cpuCurrentSpeed);
+
+    //Memory
+    await registerSimpleGauges(register, DYNAMIC_MEMORY_METRICS, si.mem);
 
 }
