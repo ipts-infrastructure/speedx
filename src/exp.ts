@@ -15,3 +15,15 @@ const currentSpeed = await si.cpuCurrentSpeed();
 console.log(currentSpeed.avg)
 console.log(currentSpeed.min)
 console.log(currentSpeed.max)
+
+const shell = await si.shell();
+
+console.log(shell)
+
+
+const disksio = await si.disksIO();
+
+console.log(disksio.rIO_sec)
+console.log(disksio.wIO_sec)
+console.log(disksio.tIO_sec)
+

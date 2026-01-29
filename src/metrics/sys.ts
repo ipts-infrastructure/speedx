@@ -89,9 +89,6 @@ const DYNAMIC_CORE_TEMPERATURE_METRICS: LabeledMetricConfig = {
     dataFields: ['cores']
 };
 
-// Battery
-const DYNAMIC_BATTERY_METRICS: MetricConfig[] = 
-
 // MEMORY
 const DYNAMIC_MEMORY_METRICS: MetricConfig[] = [
     { metricName: 'machine_memory_total', description: 'Total physical memory in bytes', dataField: 'total' },
@@ -105,6 +102,45 @@ const DYNAMIC_MEMORY_METRICS: MetricConfig[] = [
     { metricName: 'machine_memory_swapused', description: 'Swap space currently in use in bytes', dataField: 'swapused' },
     { metricName: 'machine_memory_swapfree', description: 'Unused swap space in bytes', dataField: 'swapfree' }
 ];
+
+// Battery
+const DYNAMIC_BATTERY_METRICS: MetricConfig[] = [
+    { metricName: 'machine_battery_ac_connected', description: 'Ac connected to system', dataField: 'acConnected' },
+    { metricName: 'machine_battery_voltage', description: 'Current voltage of battery of system in V', dataField: 'voltage' }
+];
+
+// Operating system
+const STATIC_OPEARTING_SYSTEM_METRICS: LabeledMetricConfig = {
+    metricName: 'machine_os',
+    description: 'System OS information',
+    labelKeys: ['platform', 'distro', 'release', 'codename', 'kernel', 'arch', 'hostname', 'fqdn', 'codepage', 'logofile', 'serial', 'build', 'uefi'],
+    dataFields: ['platform', 'distro', 'release', 'codename', 'kernel', 'arch', 'hostname', 'fqdn', 'codepage', 'logofile', 'serial', 'build', 'uefi']
+};
+
+// Current load, processes & services
+// const DYNAMIC_CURRENT_LOAD: MetricConfig[] = [
+//     { metricName: 'machine_current_load', description: 'Ac connected to system', dataField: 'acConnected' },
+
+// ];
+
+const STATIC_UUID_METRICS: LabeledMetricConfig = {
+    metricName: 'machine_uuid',
+    description: 'System UUID information',
+    labelKeys: ['os', 'hardware', 'macs'],
+    dataFields: ['os', 'hardware', 'macs']
+};
+
+// Disk IO
+const STATIC_DISKSIO_METRICS: MetricConfig[] = [
+    { metricName: 'machine_disksio_rio', description: 'Read IOs on all mounted devices', dataField: 'rIO' },
+    { metricName: 'machine_disksio_wio', description: 'Write IOs on all mounted devices', dataField: 'wIO' },
+    { metricName: 'machine_disksio_tio', description: 'total IOs on all mounted devices', dataField: 'tIO' },
+    { metricName: 'machine_disksio_rio_sec', description: 'Read IO per seconds', dataField: 'rIO_sec' },
+    { metricName: 'machine_disksio_wio_sec', description: 'Write IO per seconds', dataField: 'wIO_sec' },
+    { metricName: 'machine_disksio_tio_sec', description: 'total IO per seconds', dataField: 'tIO_sec' },
+    { metricName: 'machine_disksio_ms', description: 'IO internal length in milliseconds', dataField: 'ms' }
+];
+
 
 async function registerSimpleGauges(register: client.Registry, metrics: MetricConfig[], siFunc: Function) {
     metrics.forEach(({ metricName, description, dataField }) => {
@@ -179,8 +215,6 @@ async function registerDynamicLabeledGauge(register: client.Registry, metrics: L
     });
 }
 
-//
-
 export async function registerSysMetrics(register: client.Registry) {
 
     //General
@@ -203,4 +237,13 @@ export async function registerSysMetrics(register: client.Registry) {
     //Memory
     await registerSimpleGauges(register, DYNAMIC_MEMORY_METRICS, si.mem);
 
+    //Battery
+    await registerSimpleGauges(register, DYNAMIC_BATTERY_METRICS, si.battery);
+
+    // Operating system
+    await registerStaticLabeledGauge(register, STATIC_OPEARTING_SYSTEM_METRICS, si.osInfo);
+    await registerStaticLabeledGauge(register, STATIC_UUID_METRICS, si.uuid);
+
+    // Filesystem
+    await registerSimpleGauges(register, STATIC_DISKSIO_METRICS, si.disksIO);
 }
