@@ -8,22 +8,33 @@ import si from 'systeminformation';
 
 const cache : Record<string, any> = await si.cpuCache();
 
-console.log(cache)
+// console.log(cache)
 
-const currentSpeed = await si.cpuCurrentSpeed();
+// const currentSpeed = await si.cpuCurrentSpeed();
 
-console.log(currentSpeed.avg)
-console.log(currentSpeed.min)
-console.log(currentSpeed.max)
+// console.log(currentSpeed.avg)
+// console.log(currentSpeed.min)
+// console.log(currentSpeed.max)
 
-const shell = await si.shell();
+// const shell = await si.shell();
 
-console.log(shell)
+// console.log(shell)
 
 
-const disksio = await si.disksIO();
+// const disksio = await si.disksIO();
 
-console.log(disksio.rIO_sec)
-console.log(disksio.wIO_sec)
-console.log(disksio.tIO_sec)
+// console.log(disksio.rIO_sec)
+// console.log(disksio.wIO_sec)
+// console.log(disksio.tIO_sec)
 
+
+// const processes = await si.processes();
+
+
+const memLayout = await si.memLayout();
+
+function check(){
+    console.log( memLayout);
+}
+
+check()
