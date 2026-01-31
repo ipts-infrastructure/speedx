@@ -8,6 +8,46 @@ import type {
 } from './metric.model';
 import { logger } from '../utils/logger';
 
+/** Cache: siFunctionName -> last result. Written by prefetcher, read by gauge collect(). */
+const dynamicDataCache = new Map<string, unknown>();
+
+function getCachedDynamicData(siFunctionName: string): unknown {
+    return dynamicDataCache.get(siFunctionName) ?? null;
+}
+
+/** Collects unique SI function names used by dynamic metrics (simple dynamic + dynamicLabeled). */
+function getDynamicSiSources(definitions: MetricDefinition[]): string[] {
+    const set = new Set<string>();
+    for (const def of definitions) {
+        if (def.kind === 'simple' && def.config.dataType === 'dynamic') {
+            set.add(def.config.siFunctionName);
+        } else if (def.kind === 'dynamicLabeled') {
+            set.add(def.config.siFunctionName);
+        }
+    }
+    return [...set];
+}
+/** Fetches data from the specified SI function and stores it in the dynamic data cache. */
+async function saveCache(siFunctionName: string): Promise<void> {
+    try {
+        const result = await (si as any)[siFunctionName]();
+        dynamicDataCache.set(siFunctionName, result);
+    } catch (err) {
+        logger.error("Prefetch failed for {siFunctionName}: {error}", { siFunctionName, error: err });
+    }
+}
+
+/** Pre-fetches all dynamic SI data and refreshes at intervalMs. Call once after METRICS is defined. */
+function refreshCache(definitions: MetricDefinition[], intervalMs: number): void {
+    const sources = getDynamicSiSources(definitions);
+    if (sources.length === 0) return;
+
+    const run = () => Promise.all(sources.map(saveCache));
+
+    run().then(() => logger.debug("Initial dynamic metrics prefetch done"));
+    setInterval(() => run(), intervalMs);
+}
+
 /** Converts a value from systeminformation to a numeric gauge value (number, boolean→0/1, else NaN). */
 function toGaugeValue(val: unknown, metricName: string): number {
     if (typeof val === 'number' && !Number.isNaN(val)) return val;
@@ -418,7 +458,6 @@ const METRICS: MetricDefinition[] = [
         },
     }
 ];
-
 export async function registerSysMetrics(register: client.Registry) {
     for (const def of METRICS) {
         switch (def.kind) {
