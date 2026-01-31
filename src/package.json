@@ -11,6 +11,8 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@logtape/file": "^2.0.2",
+    "@logtape/logtape": "^2.0.2",
     "figlet": "^1.10.0",
     "macos-temperature-sensor": "^1.0.4",
     "osx-temperature-sensor": "^1.0.8",
