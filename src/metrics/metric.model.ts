@@ -12,3 +12,14 @@ export interface MetricsConfig {
     metricNamePrefix: string;
     metrics: MetricConfig[];
 };
+
+
+/** Config for dynamic labeled gauges (array-returning SI calls, one gauge per value field). */
+export interface DynamicLabeledGaugesConfig {
+    siFunctionName: string;
+    metricNamePrefix: string;
+    labelNames: string[];
+    valueFields: string[];
+    description?: string;
+    collectErrorLabel?: string;
+}
