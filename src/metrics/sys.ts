@@ -16,134 +16,6 @@ function toGaugeValue(val: unknown, metricName: string): number {
     return NaN;
 }
 
-// GENERAL
-const DYNAMIC_GENERAL_METRICS: MetricConfig[] = [
-    { metricName: 'machine_current', description: 'System local time in milliseconds', dataField: 'current' },
-    { metricName: 'machine_uptime', description: 'System uptime in seconds', dataField: 'uptime' }
-];
-
-const STATIC_GENERAL_METRICS: LabeledMetricConfig = {
-    metricName: 'machine_info',
-    description: 'System time related information',
-    labelKeys: ['timezone', 'timezone_name'],
-    dataFields: ['timezone', 'timezoneName']
-};
-
-// SYSTEM (HW)
-const STATIC_HW_INFO: LabeledMetricConfig = {
-    metricName: 'machine_hw_info',
-    description: 'Static Hardware information',
-    labelKeys: ['version', 'serial', 'uuid'],
-    dataFields: ['version', 'serial', 'uuid']
-};
-
-const STATIC_BASEBOARD_METRICS: LabeledMetricConfig = {
-    metricName: 'machine_baseboard_info',
-    description: 'System baseboard information',
-    labelKeys: ['manufacturer', 'version', 'serial', 'mem_max', 'mem_slots'],
-    dataFields: ['manufacturer', 'version', 'serial', 'memMax', 'memSlots']
-};
-
-const STATIC_CHASSIS_METRICS: LabeledMetricConfig = {
-    metricName: 'machine_chassis_info',
-    description: 'System chassis information',
-    labelKeys: ['manufacturer', 'chassis', 'type', 'version'],
-    dataFields: ['manufacturer', 'chassis', 'type', 'version']
-};
-
-// CPU
-const DYNAMIC_CPU_METRICS: MetricConfig[] = [
-    { metricName: 'machine_cpu_speed', description: 'Current CPU clock speed in GHz', dataField: 'speed' },
-    { metricName: 'machine_cpu_speed_min', description: 'Minimum CPU clock speed in GHz', dataField: 'speedMin' },
-    { metricName: 'machine_cpu_speed_max', description: 'Maximum CPU clock speed in GHz (turbo)', dataField: 'speedMax' },
-    { metricName: 'machine_cpu_virtualization', description: 'Hardware virtualization enabled/disabled', dataField: 'virtualization' }
-];
-
-const STATIC_CPU_METRICS: LabeledMetricConfig = {
-    metricName: 'machine_cpu_info',
-    description: 'Static CPU information',
-    labelKeys: ['cores', 'physical_cores', 'efficiency_cores', 'performance_cores', 'vendor', 'family', 'model'],
-    dataFields: ['cores', 'physicalCores', 'efficiencyCores', 'performanceCores', 'vendor', 'family', 'model']
-};
-
-const STATIC_CPU_CACHE_METRICS: LabeledMetricConfig = {
-    metricName: 'machine_cpu_cache',
-    description: 'System cpu cache in bytes',
-    labelKeys: ['l1d_size', 'l1i_size', 'l2_size', 'l3_size'],
-    dataFields: ['l1d', 'l1i', 'l2', 'l3']
-}
-
-const DYNAMIC_CPU_TEMPERATURE_METRICS: MetricConfig[] = [
-    { metricName: 'machine_cpu_main_temperature', description: 'Main/average CPU package temperature in °C', dataField: 'main' },
-    { metricName: 'machine_cpu_max', description: 'Maximum reported CPU temperature in °C', dataField: 'max' }
-];
-
-const DYNAMIC_CPU_CURRENT_SPEED_METRICS: MetricConfig[] = [
-    { metricName: 'machine_cpu_current_speed_avg', description: 'Average CPU speed for all cores', dataField: 'avg' },
-    { metricName: 'machine_cpu_current_speed_max', description: 'Max CPU speed for all cores', dataField: 'max' },
-    { metricName: 'machine_cpu_current_speed_min', description: 'Min CPU speed for all cores', dataField: 'min' }
-];
-
-const DYNAMIC_CORE_TEMPERATURE_METRICS: LabeledMetricConfig = {
-    metricName: 'machine_cpu',
-    description: 'CPU core temperatures in °C',
-    labelKeys: ['cores_temperatures'],
-    dataFields: ['cores']
-};
-
-// MEMORY
-const DYNAMIC_MEMORY_METRICS: MetricConfig[] = [
-    { metricName: 'machine_memory_total', description: 'Total physical memory in bytes', dataField: 'total' },
-    { metricName: 'machine_memory_free', description: 'Unused memory in bytes', dataField: 'free' },
-    { metricName: 'machine_memory_used', description: 'Currently used memory in bytes', dataField: 'used' },
-    { metricName: 'machine_memory_active', description: 'Memory actively in use (excluding buffers/cache)', dataField: 'active' },
-    { metricName: 'machine_memory_buffcache', description: 'Memory used for buffers and cache', dataField: 'buffcache' },
-    { metricName: 'machine_memory_reclaimable', description: 'Cache memory that can be reclaimed', dataField: 'reclaimable' },
-    { metricName: 'machine_memory_available', description: 'Memory available for new processes without swapping', dataField: 'available' },
-    { metricName: 'machine_memory_swaptotal', description: 'Total swap space in bytes', dataField: 'swaptotal' },
-    { metricName: 'machine_memory_swapused', description: 'Swap space currently in use in bytes', dataField: 'swapused' },
-    { metricName: 'machine_memory_swapfree', description: 'Unused swap space in bytes', dataField: 'swapfree' }
-];
-
-// Battery
-const DYNAMIC_BATTERY_METRICS: MetricConfig[] = [
-    { metricName: 'machine_battery_ac_connected', description: 'Ac connected to system', dataField: 'acConnected' },
-    { metricName: 'machine_battery_voltage', description: 'Current voltage of battery of system in V', dataField: 'voltage' }
-];
-
-// Operating system
-const STATIC_OPEARTING_SYSTEM_METRICS: LabeledMetricConfig = {
-    metricName: 'machine_os',
-    description: 'System OS information',
-    labelKeys: ['platform', 'distro', 'release', 'codename', 'kernel', 'arch', 'hostname', 'fqdn', 'codepage', 'logofile', 'serial', 'build', 'uefi'],
-    dataFields: ['platform', 'distro', 'release', 'codename', 'kernel', 'arch', 'hostname', 'fqdn', 'codepage', 'logofile', 'serial', 'build', 'uefi']
-};
-
-// Current load, processes & services
-// const DYNAMIC_CURRENT_LOAD: MetricConfig[] = [
-//     { metricName: 'machine_current_load', description: 'Ac connected to system', dataField: 'acConnected' },
-
-// ];
-
-const STATIC_UUID_METRICS: LabeledMetricConfig = {
-    metricName: 'machine_uuid',
-    description: 'System UUID information',
-    labelKeys: ['os', 'hardware', 'macs'],
-    dataFields: ['os', 'hardware', 'macs']
-};
-
-// Disk IO
-const STATIC_DISKSIO_METRICS: MetricConfig[] = [
-    { metricName: 'machine_disksio_rio', description: 'Read IOs on all mounted devices', dataField: 'rIO' },
-    { metricName: 'machine_disksio_wio', description: 'Write IOs on all mounted devices', dataField: 'wIO' },
-    { metricName: 'machine_disksio_tio', description: 'total IOs on all mounted devices', dataField: 'tIO' },
-    { metricName: 'machine_disksio_rio_sec', description: 'Read IO per seconds', dataField: 'rIO_sec' },
-    { metricName: 'machine_disksio_wio_sec', description: 'Write IO per seconds', dataField: 'wIO_sec' },
-    { metricName: 'machine_disksio_tio_sec', description: 'total IO per seconds', dataField: 'tIO_sec' },
-    { metricName: 'machine_disksio_ms', description: 'IO internal length in milliseconds', dataField: 'ms' }
-];
-
-
 async function registerSimpleGauges(register: client.Registry, metrics: MetricsConfig) {
     try {
         const dataType = metrics.dataType;
@@ -237,28 +109,6 @@ async function registerLabeledGauge(register: client.Registry, labelMetrics: Lab
     }
 }
 
-async function registerDynamicLabeledGauge(register: client.Registry, metrics: LabeledMetricConfig, siFunc: Function) {
-    const gauge = new client.Gauge({
-        name: metrics.metricName,
-        help: metrics.description,
-        labelNames: metrics.labelKeys,
-        async collect() {
-            try {
-                const data: any = await siFunc();
-                const vals = Object.fromEntries(
-                    metrics.labelKeys.map((fieldName, idx) => [`${fieldName}`, data[metrics.dataFields[idx] as string]])
-                );
-                this.set(vals, 1);
-            } catch (err) {
-                console.error(`Error collecting ${metrics.metricName}:`, err);
-                this.reset();
-                this.set(NaN);
-            }
-        },
-        registers: [register],
-    });
-}
-
 /**
  * Registers one or more gauges that expose numeric fields from systeminformation
  * calls that return an array of objects (e.g. fsSize, disksIO, etc.)
@@ -317,35 +167,270 @@ async function registerDynamicLabeledGauges(
     return { gauges, errorGauge };
 }
 
+/** Single ordered list of all metric definitions to register. */
+const METRICS: MetricDefinition[] = [
+    // Simple (non-labeled) gauges
+    {
+        kind: 'simple',
+        config: {
+            dataType: "dynamic",
+            siFunctionName: "time",
+            metricNamePrefix: "machine",
+            metrics: [
+                { description: 'System local time in milliseconds', dataField: 'current' },
+                { description: 'System uptime in seconds', dataField: 'uptime' },
+            ],
+        },
+    },
+    {
+        kind: 'simple',
+        config: {
+            dataType: "dynamic",
+            siFunctionName: "cpu",
+            metricNamePrefix: "machine_cpu",
+            metrics: [
+                { description: 'Current CPU clock speed in GHz', dataField: 'speed' },
+                { description: 'Minimum CPU clock speed in GHz', dataField: 'speedMin' },
+                { description: 'Maximum CPU clock speed in GHz (turbo)', dataField: 'speedMax' },
+                { description: 'Hardware virtualization enabled/disabled', dataField: 'virtualization' },
+            ],
+        },
+    },
+    {
+        kind: 'simple',
+        config: {
+            dataType: "dynamic",
+            siFunctionName: "cpuTemperature",
+            metricNamePrefix: "machine_cpu_temperature",
+            metrics: [
+                { description: 'Main/average CPU package temperature in °C', dataField: 'main' },
+                { description: 'Maximum reported CPU temperature in °C', dataField: 'max' },
+            ],
+        },
+    },
+    {
+        kind: 'simple',
+        config: {
+            dataType: "dynamic",
+            siFunctionName: "cpuCurrentSpeed",
+            metricNamePrefix: "machine_cpu_current_speed",
+            metrics: [
+                { description: 'Average CPU speed for all cores', dataField: 'avg' },
+                { description: 'Max CPU speed for all cores', dataField: 'max' },
+                { description: 'Min CPU speed for all cores', dataField: 'min' },
+            ],
+        },
+    },
+    {
+        kind: 'simple',
+        config: {
+            dataType: "dynamic",
+            siFunctionName: "mem",
+            metricNamePrefix: "machine_memory",
+            metrics: [
+                { description: 'Total physical memory in bytes', dataField: 'total' },
+                { description: 'Unused memory in bytes', dataField: 'free' },
+                { description: 'Currently used memory in bytes', dataField: 'used' },
+                { description: 'Memory actively in use (excluding buffers/cache)', dataField: 'active' },
+                { description: 'Memory used for buffers and cache', dataField: 'buffcache' },
+                { description: 'Cache memory that can be reclaimed', dataField: 'reclaimable' },
+                { description: 'Memory available for new processes without swapping', dataField: 'available' },
+                { description: 'Total swap space in bytes', dataField: 'swaptotal' },
+                { description: 'Swap space currently in use in bytes', dataField: 'swapused' },
+                { description: 'Unused swap space in bytes', dataField: 'swapfree' },
+            ],
+        },
+    },
+    {
+        kind: 'simple',
+        config: {
+            dataType: "dynamic",
+            siFunctionName: "battery",
+            metricNamePrefix: "machine_battery",
+            metrics: [
+                { description: 'Ac connected to system', dataField: 'acConnected' },
+                { description: 'Current voltage of battery of system in V', dataField: 'voltage' },
+            ],
+        },
+    },
+    {
+        kind: 'simple',
+        config: {
+            dataType: "static",
+            siFunctionName: "disksIO",
+            metricNamePrefix: "machine_disksio",
+            metrics: [
+                { description: 'Read IOs on all mounted devices', dataField: 'rIO' },
+                { description: 'Write IOs on all mounted devices', dataField: 'wIO' },
+                { description: 'total IOs on all mounted devices', dataField: 'tIO' },
+                { description: 'Read IO per seconds', dataField: 'rIO_sec' },
+                { description: 'Write IO per seconds', dataField: 'wIO_sec' },
+                { description: 'total IO per seconds', dataField: 'tIO_sec' },
+                { description: 'IO internal length in milliseconds', dataField: 'ms' },
+            ],
+        },
+    },
+    // Labeled gauges
+    {
+        kind: 'labeled',
+        config: {
+            siFunctionName: "time",
+            metricNamePrefix: "machine_timezone_info",
+            description: 'System time related information',
+            dataFields: ['timezone', 'timezoneName'],
+        },
+    },
+    {
+        kind: 'labeled',
+        config: {
+            siFunctionName: "system",
+            metricNamePrefix: "machine_hw_info",
+            description: 'System hardware information',
+            dataFields: ['version', 'serial', 'uuid'],
+        },
+    },
+    {
+        kind: 'labeled',
+        config: {
+            siFunctionName: "system",
+            metricNamePrefix: "machine_baseboard_info",
+            description: 'System baseboard information',
+            dataFields: ['manufacturer', 'version', 'serial', 'memMax', 'memSlots'],
+        },
+    },
+    {
+        kind: 'labeled',
+        config: {
+            siFunctionName: "system",
+            metricNamePrefix: "machine_chassis_info",
+            description: 'System chassis information',
+            dataFields: ['manufacturer', 'chassis', 'type', 'version'],
+        },
+    },
+    {
+        kind: 'labeled',
+        config: {
+            siFunctionName: "cpu",
+            metricNamePrefix: "machine_cpu_info",
+            description: 'CPU information',
+            dataFields: ['manufacturer', 'brand', 'vendor', 'family', 'model'],
+        },
+    },
+    {
+        kind: 'labeled',
+        config: {
+            siFunctionName: "cpuTemperature",
+            metricNamePrefix: "machine_cpu_core_temperature",
+            description: 'CPU core temperatures in °C',
+            dataFields: ['cores'],
+        },
+    },
+    {
+        kind: 'labeled',
+        config: {
+            siFunctionName: "cpuCache",
+            metricNamePrefix: "machine_cpu_cache",
+            description: 'System cpu cache in bytes',
+            dataFields: ['l1d', 'l1i', 'l2', 'l3'],
+        },
+    },
+    {
+        kind: 'labeled',
+        config: {
+            siFunctionName: "memLayout",
+            metricNamePrefix: "machine_memory_layout",
+            description: 'System memory layout',
+            dataFields: ['size', 'type', 'clockSpeed'],
+        },
+    },
+    {
+        kind: 'labeled',
+        config: {
+            siFunctionName: "osInfo",
+            metricNamePrefix: "machine_os_info",
+            description: 'System OS information',
+            dataFields: ['platform', 'distro', 'release', 'codename', 'kernel', 'arch', 'hostname', 'fqdn', 'codepage', 'logofile', 'serial', 'build', 'uefi'],
+        },
+    },
+    {
+        kind: 'labeled',
+        config: {
+            siFunctionName: "uuid",
+            metricNamePrefix: "machine_uuid_info",
+            description: 'System UUID information',
+            dataFields: ['os', 'hardware', 'macs'],
+        },
+    },
+    {
+        kind: 'labeled',
+        config: {
+            siFunctionName: "graphics",
+            resultObject: "controllers",
+            metricNamePrefix: "machine_graphics_controllers_info",
+            description: 'System graphics controllers information',
+            dataFields: ['vendor', 'model', 'deviceId', 'bus', 'vram', 'vramDynamic', 'external', 'cores', 'metalVersion'],
+        },
+    },
+    {
+        kind: 'labeled',
+        config: {
+            siFunctionName: "diskLayout",
+            metricNamePrefix: "machine_disk_layout_info",
+            description: 'System physical disk layout',
+            dataFields: ['device', 'type', 'name', 'size', 'firmwareRevision', 'serialNum', 'interfaceType', 'smartStatus'],
+        },
+    },
+    {
+        kind: 'labeled',
+        config: {
+            siFunctionName: "blockDevices",
+            metricNamePrefix: "machine_block_device_info",
+            description: 'System disks, partitions, raids and roms',
+            dataFields: ['name', 'type', 'mount', 'size', 'physical', 'uuid', 'label', 'model', 'serial', 'removable', 'protocol', 'device'],
+        },
+    },
+    // Dynamic labeled gauges (array-returning SI methods)
+    {
+        kind: 'dynamicLabeled',
+        config: {
+            siFunctionName: "fsSize",
+            metricNamePrefix: "machine_fs",
+            labelNames: ["fs", "type"],
+            valueFields: ["used", "available", "use"],
+        },
+    },
+    {
+        kind: 'dynamicLabeled',
+        config: {
+            siFunctionName: "users",
+            metricNamePrefix: "machine_users",
+            labelNames: ["user"],
+            valueFields: ["tty", "date", "time", "ip", "command"],
+        },
+    },
+    {
+        kind: 'dynamicLabeled',
+        config: {
+            siFunctionName: "networkInterfaces",
+            metricNamePrefix: "machine_network_interfaces",
+            labelNames: ["iface", "ifaceName", "mac", "internal", "virtual", "mtu", "type", "duplex", "speed"],
+            valueFields: ["default", "ip4", "ip4subnet", "ip6", "ip6subnet", "operstate","dhcp","dnsSuffix", "ieee8021xAuth", "ieee8021xState", "carrierChanges"],
+        },
+    }
+];
+
 export async function registerSysMetrics(register: client.Registry) {
-
-    //General
-    await registerSimpleGauges(register, DYNAMIC_GENERAL_METRICS, si.time);
-    await registerStaticLabeledGauge(register, STATIC_GENERAL_METRICS, si.time);
-
-    //System (HW)
-    await registerStaticLabeledGauge(register, STATIC_HW_INFO, si.system);
-    await registerStaticLabeledGauge(register, STATIC_BASEBOARD_METRICS, si.baseboard);
-    await registerStaticLabeledGauge(register, STATIC_CHASSIS_METRICS, si.chassis);
-
-    //CPU
-    await registerStaticLabeledGauge(register, STATIC_CPU_METRICS, si.cpu);
-    await registerSimpleGauges(register, DYNAMIC_CPU_METRICS, si.cpu);
-    await registerSimpleGauges(register, DYNAMIC_CPU_TEMPERATURE_METRICS, si.cpuTemperature);
-    await registerDynamicLabeledGauge(register, DYNAMIC_CORE_TEMPERATURE_METRICS, si.cpuTemperature)
-    await registerStaticLabeledGauge(register, STATIC_CPU_CACHE_METRICS, si.cpuCache);
-    await registerSimpleGauges(register, DYNAMIC_CPU_CURRENT_SPEED_METRICS, si.cpuCurrentSpeed);
-
-    //Memory
-    await registerSimpleGauges(register, DYNAMIC_MEMORY_METRICS, si.mem);
-
-    //Battery
-    await registerSimpleGauges(register, DYNAMIC_BATTERY_METRICS, si.battery);
-
-    // Operating system
-    await registerStaticLabeledGauge(register, STATIC_OPEARTING_SYSTEM_METRICS, si.osInfo);
-    await registerStaticLabeledGauge(register, STATIC_UUID_METRICS, si.uuid);
-
-    // Filesystem
-    await registerSimpleGauges(register, STATIC_DISKSIO_METRICS, si.disksIO);
+    for (const def of METRICS) {
+        switch (def.kind) {
+            case 'simple':
+                await registerSimpleGauges(register, def.config);
+                break;
+            case 'labeled':
+                await registerLabeledGauge(register, def.config);
+                break;
+            case 'dynamicLabeled':
+                await registerDynamicLabeledGauges(register, def.config);
+                break;
+        }
+    }
 }
