@@ -1,13 +1,17 @@
 import si from 'systeminformation';
 import client from 'prom-client';
+
+import { COLLECT_INTERVAL_MS } from '../configs/config';
+import { logger } from '../utils/logger';
+import { parseStrToNumber } from '../utils/helper';
+
 import type {
     MetricsConfig,
     LabeledMetricsConfig,
     DynamicLabeledGaugesConfig,
     MetricDefinition,
 } from './metric.model';
-import { logger } from '../utils/logger';
-import { COLLECT_INTERVAL_MS } from '../configs/config';
+
 
 /** Cache: siFunctionName -> last result. Written by prefetcher, read by gauge collect(). */
 const dataCache = new Map<string, unknown>();
@@ -53,6 +57,10 @@ function refreshCache(definitions: MetricDefinition[], intervalMs: number): void
 function toGaugeValue(val: unknown, metricName: string): number {
     if (typeof val === 'number' && !Number.isNaN(val)) return val;
     if (typeof val === 'boolean') return val ? 1 : 0;
+    if (typeof val === 'string' && val !== ""){
+        const parsed = parseStrToNumber(val);
+        if (!Number.isNaN(parsed)) return parsed;
+    }
     logger.error("Unexpected data type for {metricName}: {type} {value}", { metricName, type: typeof val, value: val });
     return NaN;
 }
@@ -321,9 +329,9 @@ const METRICS: MetricDefinition[] = [
                 { description: 'Read IOs on all mounted devices', dataField: 'rIO' },
                 { description: 'Write IOs on all mounted devices', dataField: 'wIO' },
                 { description: 'total IOs on all mounted devices', dataField: 'tIO' },
-                { description: 'Read IO per seconds', dataField: 'rIO_sec' },
-                { description: 'Write IO per seconds', dataField: 'wIO_sec' },
-                { description: 'total IO per seconds', dataField: 'tIO_sec' },
+                // { description: 'Read IO per seconds', dataField: 'rIO_sec' }, //'object' null
+                // { description: 'Write IO per seconds', dataField: 'wIO_sec' },
+                // { description: 'total IO per seconds', dataField: 'tIO_sec' },
                 { description: 'IO internal length in milliseconds', dataField: 'ms' },
             ],
         },
@@ -477,24 +485,6 @@ const METRICS: MetricDefinition[] = [
             dataFields: ['name', 'type', 'mount', 'size', 'physical', 'uuid', 'label', 'model', 'serial', 'removable', 'protocol', 'device'],
         },
     },
-    {
-        kind: 'labeled',
-        config: {
-            siFunctionName: "users",
-            metricNamePrefix: "machine_users",
-            description: 'System online user',
-            dataFields: ["tty", "date", "time", "ip", "command"],
-        },
-    },
-    {
-        kind: 'labeled',
-        config: {
-            siFunctionName: "users",
-            metricNamePrefix: "machine_users",
-            description: 'System online users',
-            dataFields: ["user", "tty", "date", "time", "ip", "command"],
-        },
-    },
     // Dynamic labeled gauges (array-returning SI methods)
     {
         kind: 'dynamicLabeled',
@@ -512,6 +502,15 @@ const METRICS: MetricDefinition[] = [
             metricNamePrefix: "machine_network_stats",
             labelNames: ["iface"],
             valueFields: ["operstate", "rx_bytes", "rx_dropped", "rx_errors", "tx_bytes", "tx_dropped", "tx_errors", "rx_sec", "tx_sec", "ms"],
+        },
+    }, 
+    {
+        kind: 'dynamicLabeled',
+        config: {
+            siFunctionName: "users",
+            metricNamePrefix: "machine_users",
+            labelNames: ["user"],
+            valueFields: ["tty", "date", "time", "ip", "command"],
         },
     },
     // {
