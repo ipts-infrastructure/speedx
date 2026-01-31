@@ -31,3 +31,9 @@ export interface DynamicLabeledGaugesConfig {
     collectErrorLabel?: string;
 }
 
+/** Discriminated union of all metric config types for a single registry. */
+export type MetricDefinition =
+    | { kind: 'simple'; config: MetricsConfig }
+    | { kind: 'labeled'; config: LabeledMetricsConfig }
+    | { kind: 'dynamicLabeled'; config: DynamicLabeledGaugesConfig };
+
