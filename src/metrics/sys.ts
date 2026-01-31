@@ -259,6 +259,64 @@ async function registerDynamicLabeledGauge(register: client.Registry, metrics: L
     });
 }
 
+/**
+ * Registers one or more gauges that expose numeric fields from systeminformation
+ * calls that return an array of objects (e.g. fsSize, disksIO, etc.)
+ */
+async function registerDynamicLabeledGauges(
+    register: client.Registry,
+    config: DynamicLabeledGaugesConfig
+) {
+    const {
+        siFunctionName,
+        metricNamePrefix,
+        labelNames,
+        valueFields,
+        description = "System information value",
+        collectErrorLabel = `${metricNamePrefix}_collect_error`,
+    } = config;
+
+    const errorGauge = new client.Gauge({
+        name: collectErrorLabel,
+        help: `1 = last collection failed for ${String(siFunctionName)}`,
+        registers: [register],
+    });
+
+    const gauges = valueFields.map((field) => {
+        const gaugeName = `${metricNamePrefix}_${field}`;
+
+        return new client.Gauge({
+            name: gaugeName,
+            help: `${description} - ${field}`,
+            labelNames,
+            registers: [register],
+            async collect() {
+                try {
+                    errorGauge.set(0);
+                    const data = await (si as any)[siFunctionName]();
+                    const items = Array.isArray(data) ? data : [data];
+
+                    items.forEach((item: Record<string, any>) => {
+                        const labels: Record<string, string> = {};
+                        labelNames.forEach((label) => {
+                            labels[label] = String(item[label] ?? '');
+                        });
+                        const value = Number(item[field]);
+                        if (!Number.isNaN(value)) {
+                            this.set(labels, value);
+                        }
+                    });
+                } catch (err) {
+                    logger.error("Error collecting {gaugeName}: {error}", { gaugeName, error: err });
+                    errorGauge.set(1);
+                }
+            },
+        });
+    });
+
+    return { gauges, errorGauge };
+}
+
 export async function registerSysMetrics(register: client.Registry) {
 
     //General
