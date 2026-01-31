@@ -1,10 +1,21 @@
-// BUN
-// https://bun.com/docs/guides/runtime/read-env (invesigation needed)
-export const PORT = process.env.PORT || "8876";
+/**
+ * Exporter
+ */
+
+/** Interval in ms for pre-fetching dynamic data. */
+export const COLLECT_INTERVAL_MS =  Number(process.env.METRICS_COLLECT_INTERVAL_MS) || 10_000;
 
 
 /**
- * logtape
+ * Bun
+ */
+
+// https://bun.com/docs/guides/runtime/read-env (invesigation needed)
+export const PORT = process.env.PORT || "8872";
+
+
+/**
+ * Logtape
  */
 
 /** Log file path. Requires write permission (e.g. create file and chown, or run as root). */
@@ -19,6 +30,3 @@ export const LOG_MAX_FILES = Number(process.env.LOG_MAX_FILES) || 3;
 /**
  * systeminformation 
  */
-
-/** Interval in ms for pre-fetching dynamic SI data. Scrape handlers use cached data only. */
-export const DATA_CACHE_REFRESH_INTERVAL_MS = Number(process.env.METRICS_DATA_CACHE_REFRESH_INTERVAL_MS) || 5_000;

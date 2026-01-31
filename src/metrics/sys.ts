@@ -7,12 +7,13 @@ import type {
     MetricDefinition,
 } from './metric.model';
 import { logger } from '../utils/logger';
+import { COLLECT_INTERVAL_MS } from '../configs/config';
 
 /** Cache: siFunctionName -> last result. Written by prefetcher, read by gauge collect(). */
-const dynamicDataCache = new Map<string, unknown>();
+const dataCache = new Map<string, unknown>();
 
 function getCachedDynamicData(siFunctionName: string): unknown {
-    return dynamicDataCache.get(siFunctionName) ?? null;
+    return dataCache.get(siFunctionName) ?? null;
 }
 
 /** Collects unique SI function names used by dynamic metrics (simple dynamic + dynamicLabeled). */
@@ -31,7 +32,7 @@ function getDynamicSiSources(definitions: MetricDefinition[]): string[] {
 async function saveCache(siFunctionName: string): Promise<void> {
     try {
         const result = await (si as any)[siFunctionName]();
-        dynamicDataCache.set(siFunctionName, result);
+        dataCache.set(siFunctionName, result);
     } catch (err) {
         logger.error("Prefetch failed for {siFunctionName}: {error}", { siFunctionName, error: err });
     }
@@ -56,6 +57,10 @@ function toGaugeValue(val: unknown, metricName: string): number {
     return NaN;
 }
 
+/**
+ * 
+ * 
+ */
 async function registerSimpleGauges(register: client.Registry, metrics: MetricsConfig) {
     try {
         const dataType = metrics.dataType;
@@ -80,11 +85,15 @@ async function registerSimpleGauges(register: client.Registry, metrics: MetricsC
                     name: metricName,
                     help: description,
                     registers: [register],
-                    async collect() {
+                    collect() {
                         try {
                             this.reset();
-                            logger.debug("Refreshing metric {metricName}", { metricName });
-                            const siResultObjInner = await (si as any)[siFuncName]();
+                            const cached = getCachedDynamicData(siFuncName);
+                            if (cached == null) {
+                                this.set(NaN);
+                                return;
+                            }
+                            const siResultObjInner = cached as Record<string, unknown>;
                             this.set(toGaugeValue(siResultObjInner[dataField], metricName));
                         } catch (err) {
                             this.reset();
@@ -100,6 +109,10 @@ async function registerSimpleGauges(register: client.Registry, metrics: MetricsC
     }
 }
 
+/**
+ * 
+ * 
+ */
 async function registerLabeledGauge(register: client.Registry, labelMetrics: LabeledMetricsConfig) {
     try {
         const siFuncName = labelMetrics.siFunctionName;
@@ -180,13 +193,18 @@ async function registerDynamicLabeledGauges(
             help: `${description} - ${field}`,
             labelNames,
             registers: [register],
-            async collect() {
+            collect() {
                 try {
+                    const cached = getCachedDynamicData(siFunctionName);
+                    if (cached == null) {
+                        errorGauge.set(1);
+                        return;
+                    }
                     errorGauge.set(0);
-                    const data = await (si as any)[siFunctionName]();
+                    const data = cached as unknown;
                     const items = Array.isArray(data) ? data : [data];
 
-                    items.forEach((item: Record<string, any>) => {
+                    items.forEach((item: Record<string, unknown>) => {
                         const labels: Record<string, string> = {};
                         labelNames.forEach((label) => {
                             labels[label] = String(item[label] ?? '');
@@ -310,6 +328,36 @@ const METRICS: MetricDefinition[] = [
             ],
         },
     },
+    {
+        kind: 'simple',
+        config: {
+            dataType: "dynamic",
+            siFunctionName: "fsOpenFiles",
+            metricNamePrefix: "machine_fs_open_files",
+            metrics: [
+                { description: 'Max file descriptors', dataField: 'max' },
+                { description: 'Current open files count', dataField: 'allocated' },
+                { description: 'Count available', dataField: 'available' },
+            ],
+        },
+    },
+    {
+        kind: 'simple',
+        config: {
+            dataType: "dynamic",
+            siFunctionName: "fsStats",
+            metricNamePrefix: "machine_fs_stats",
+            metrics: [
+                { description: 'Bytes read since startup', dataField: 'rx' },
+                { description: 'Bytes written since startup', dataField: 'wx' },
+                { description: 'Total bytes read + written since startup', dataField: '	tx' },
+                { description: 'Bytes read / second', dataField: 'rx_sec' },
+                { description: 'Bytes written / second', dataField: 'wx_sec' },
+                { description: 'total bytes reads + written / second', dataField: 'tx_sec' },
+                { description: 'interval length', dataField: 'ms' },
+            ],
+        },
+    },
     // Labeled gauges
     {
         kind: 'labeled',
@@ -429,35 +477,54 @@ const METRICS: MetricDefinition[] = [
             dataFields: ['name', 'type', 'mount', 'size', 'physical', 'uuid', 'label', 'model', 'serial', 'removable', 'protocol', 'device'],
         },
     },
-    // Dynamic labeled gauges (array-returning SI methods)
     {
-        kind: 'dynamicLabeled',
-        config: {
-            siFunctionName: "fsSize",
-            metricNamePrefix: "machine_fs",
-            labelNames: ["fs", "type"],
-            valueFields: ["used", "available", "use"],
-        },
-    },
-    {
-        kind: 'dynamicLabeled',
+        kind: 'labeled',
         config: {
             siFunctionName: "users",
             metricNamePrefix: "machine_users",
-            labelNames: ["user"],
-            valueFields: ["tty", "date", "time", "ip", "command"],
+            description: 'System online user',
+            dataFields: ["tty", "date", "time", "ip", "command"],
         },
     },
+    {
+        kind: 'labeled',
+        config: {
+            siFunctionName: "users",
+            metricNamePrefix: "machine_users",
+            description: 'System online users',
+            dataFields: ["user", "tty", "date", "time", "ip", "command"],
+        },
+    },
+    // Dynamic labeled gauges (array-returning SI methods)
     {
         kind: 'dynamicLabeled',
         config: {
             siFunctionName: "networkInterfaces",
             metricNamePrefix: "machine_network_interfaces",
             labelNames: ["iface", "ifaceName", "mac", "internal", "virtual", "mtu", "type", "duplex", "speed"],
-            valueFields: ["default", "ip4", "ip4subnet", "ip6", "ip6subnet", "operstate","dhcp","dnsSuffix", "ieee8021xAuth", "ieee8021xState", "carrierChanges"],
+            valueFields: ["default", "ip4", "ip4subnet", "ip6", "ip6subnet", "operstate", "dhcp", "dnsSuffix", "ieee8021xAuth", "ieee8021xState", "carrierChanges"],
         },
-    }
+    },
+    {
+        kind: 'dynamicLabeled',
+        config: {
+            siFunctionName: "networkStats",
+            metricNamePrefix: "machine_network_stats",
+            labelNames: ["iface"],
+            valueFields: ["operstate", "rx_bytes", "rx_dropped", "rx_errors", "tx_bytes", "tx_dropped", "tx_errors", "rx_sec", "tx_sec", "ms"],
+        },
+    },
+    // {
+    //     kind: 'dynamicLabeled',
+    //     config: {
+    //         siFunctionName: "dockerInfo",
+    //         metricNamePrefix: "machine_docker",
+    //         labelNames: ["id", "driver"],
+    //         valueFields: ["containers", "containersRunning", "containersPaused", "containersStopped", "images", "memoryLimit", "swapLimit", "cpuCfsPeriod", "cpuCfsQuota"],
+    //     },
+    // },
 ];
+
 export async function registerSysMetrics(register: client.Registry) {
     for (const def of METRICS) {
         switch (def.kind) {
@@ -472,4 +539,5 @@ export async function registerSysMetrics(register: client.Registry) {
                 break;
         }
     }
+    refreshCache(METRICS, COLLECT_INTERVAL_MS);
 }
