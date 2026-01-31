@@ -1,18 +1,6 @@
 import si from 'systeminformation';
 import client from 'prom-client';
 
-interface MetricConfig {
-    metricName: string;
-    description: string;
-    dataField: string;
-};
-
-interface LabeledMetricConfig {
-    metricName: string;
-    description: string;
-    labelKeys: string[];
-    dataFields: string[];
-}
 
 // GENERAL
 const DYNAMIC_GENERAL_METRICS: MetricConfig[] = [
