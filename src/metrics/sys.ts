@@ -1,6 +1,20 @@
 import si from 'systeminformation';
 import client from 'prom-client';
+import type {
+    MetricsConfig,
+    LabeledMetricsConfig,
+    DynamicLabeledGaugesConfig,
+    MetricDefinition,
+} from './metric.model';
+import { logger } from '../utils/logger';
 
+/** Converts a value from systeminformation to a numeric gauge value (number, boolean→0/1, else NaN). */
+function toGaugeValue(val: unknown, metricName: string): number {
+    if (typeof val === 'number' && !Number.isNaN(val)) return val;
+    if (typeof val === 'boolean') return val ? 1 : 0;
+    logger.error("Unexpected data type for {metricName}: {type} {value}", { metricName, type: typeof val, value: val });
+    return NaN;
+}
 
 // GENERAL
 const DYNAMIC_GENERAL_METRICS: MetricConfig[] = [
