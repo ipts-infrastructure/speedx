@@ -144,54 +144,96 @@ const STATIC_DISKSIO_METRICS: MetricConfig[] = [
 ];
 
 
-async function registerSimpleGauges(register: client.Registry, metrics: MetricConfig[], siFunc: Function) {
-    metrics.forEach(({ metricName, description, dataField }) => {
-        new client.Gauge({
-            name: metricName,
-            help: description,
-            async collect() {
-                try {
-                    const data: any = await siFunc();
-                    const val = data[dataField];
+async function registerSimpleGauges(register: client.Registry, metrics: MetricsConfig) {
+    try {
+        const dataType = metrics.dataType;
+        const siFuncName = metrics.siFunctionName;
+        const metricNamePrefix = metrics.metricNamePrefix;
+        const metricList = metrics.metrics;
+        const siResultObj = await (si as any)[siFuncName]();
 
-                    if (typeof val == "number") {
-                        this.set(val);
-                    } else if (typeof val == "boolean") {
-                        this.set(val ? 1 : 0);
-                    } else {
-                        // Log unexpected type and set metric to NaN
-                        console.error(`Unexpected data type for ${metricName}:`, typeof val, val);
-                        this.set(NaN);
-                    }
-                } catch (err) {
-                    // Log error and set metric to NaN so Prometheus knows scrape failed
-                    console.error(`Error collecting ${metricName}:`, err);
-                    this.set(NaN);
-                }
-            },
-            registers: [register]
+        metricList.forEach(({ description, dataField }) => {
+
+            const metricName = `${metricNamePrefix}_${dataField}`;
+
+            if (dataType === "static") {
+                const gauge = new client.Gauge({
+                    name: metricName,
+                    help: description,
+                    registers: [register]
+                });
+                gauge.set(toGaugeValue(siResultObj[dataField], metricName));
+            } else {
+                new client.Gauge({
+                    name: metricName,
+                    help: description,
+                    registers: [register],
+                    async collect() {
+                        try {
+                            this.reset();
+                            logger.debug("Refreshing metric {metricName}", { metricName });
+                            const siResultObjInner = await (si as any)[siFuncName]();
+                            this.set(toGaugeValue(siResultObjInner[dataField], metricName));
+                        } catch (err) {
+                            this.reset();
+                            logger.error("Error collecting {metricName}: {error}", { metricName, error: err });
+                            this.set(NaN);
+                        }
+                    },
+                });
+            }
         });
-    });
+    } catch (err) {
+        logger.error("Error collecting metric {prefix}: {error}", { prefix: metrics.metricNamePrefix, error: err });
+    }
 }
 
-async function registerStaticLabeledGauge(register: client.Registry, metrics: LabeledMetricConfig, siFunc: Function) {
-    const guage = new client.Gauge({
-        name: metrics.metricName,
-        help: metrics.description,
-        labelNames: metrics.labelKeys,
-        registers: [register],
-    });
+async function registerLabeledGauge(register: client.Registry, labelMetrics: LabeledMetricsConfig) {
     try {
-        const data: any = await siFunc();
-        const vals = Object.fromEntries(
-            metrics.labelKeys.map((fieldName, idx) =>
-                [fieldName, data[metrics.dataFields[idx] as string]]
-            ));
-        guage.set(vals, 1);
+        const siFuncName = labelMetrics.siFunctionName;
+        const description = labelMetrics.description;
+        const metricNamePrefix = labelMetrics.metricNamePrefix;
+        const resultObject = labelMetrics?.resultObject;
+        const siResultObj = resultObject ? (await (si as any)[siFuncName]())[resultObject] : await (si as any)[siFuncName]();
+
+        if (Array.isArray(siResultObj)) {
+            siResultObj.forEach((itemObj: Record<string, any>, index: number) => {
+
+                const gauge = new client.Gauge({
+                    name: `${metricNamePrefix}_${index}`,
+                    help: description,
+                    registers: [register],
+                    labelNames: Object.keys(itemObj) as any,
+                });
+
+                const vals = Object.fromEntries(
+                    labelMetrics.dataFields.map((fieldName) => [fieldName, itemObj[fieldName]])
+                );
+                gauge.set(vals, 1);
+
+            });
+        } else if (typeof siResultObj === "object") {
+            const gauge = new client.Gauge({
+                name: metricNamePrefix,
+                help: description,
+                labelNames: labelMetrics.dataFields,
+                registers: [register]
+            })
+
+            try {
+                const vals = Object.fromEntries(
+                    labelMetrics.dataFields.map((fieldName) => [fieldName, siResultObj[fieldName]])
+                );
+                gauge.set(vals, 1);
+            } catch (err) {
+                logger.error("Error collecting {prefix}: {error}", { prefix: metricNamePrefix, error: err });
+                gauge.set(NaN)
+            }
+        } else {
+            logger.error("Unsupported metric: {prefix}", { prefix: metricNamePrefix });
+        }
     } catch (err) {
-        console.error(`Error collecting ${metrics.metricName}:`, err);
-        guage.reset();
-        guage.set(NaN);
+        logger.error("Error collecting metric {prefix}: {error}", { prefix: labelMetrics.metricNamePrefix, error: err });
     }
 }
 
