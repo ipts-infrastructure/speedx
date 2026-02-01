@@ -12,10 +12,44 @@ import type {
     MetricDefinition,
 } from './metric.model';
 
+/** */
+const SI_KEYS: Record<string, string> = {
+    system: "*",
+    bios: "*",
+    baseboard: "*",
+    chassis: "*",
+    osInfo: "*",
+    uuid: "*",
+    versions: "*",
+    cpu: "*",
+    cpuTemperature: "*",
+    graphics: "*",
+    net: "*",
+    memLayout: "*",
+    diskLayout: "*",
+    blockDevices: "*",
+    fsOpenFiles: "*",
+    usb: "*", 
+    time: "*",  
+    cpuCurrentSpeed: "*", 
+    battery: "*", 
+    services: "*", 
+    wifiNetworks: "*", 
+    currentLoad: "*", 
+    mem: "*", 
+    networkConnections: "*", 
+    fsSize: "*", 
+    disksIO: "*", 
+    networkStats: "*", 
+    users: "*", 
+    fsStats: "*", 
+    processes: "*", 
+};
 
 /** Cache: result of si.getAllData(). One fresh snapshot; all gauges read from it. */
 let dataCache: Record<string, unknown> = {};
 
+/** */
 function getCachedData(siFunctionName: string): unknown {
     return dataCache[siFunctionName] ?? null;
 }
@@ -23,7 +57,12 @@ function getCachedData(siFunctionName: string): unknown {
 /** Fetches all system data once and stores it; all gauges use this cache. */
 async function refreshCache(): Promise<void> {
     try {
-        const result = await si.getAllData();
+        /**
+         * [1153.11ms] si.get(allDataKey)
+         * [1.90s] si.getAllData
+         */
+        // const result = await si.getAllData();
+        const result = await si.get(SI_KEYS);
         dataCache = (result as unknown) as Record<string, unknown> ?? {};
         logger.debug("All-data cache refreshed");
     } catch (err) {
@@ -255,8 +294,8 @@ const METRICS: MetricDefinition[] = [
             metricNamePrefix: "machine_cpu",
             metrics: [
                 { description: 'Current CPU clock speed in GHz', dataField: 'speed' },
-                // { description: 'Minimum CPU clock speed in GHz', dataField: 'speedMin' },
-                // { description: 'Maximum CPU clock speed in GHz (turbo)', dataField: 'speedMax' },
+                { description: 'Minimum CPU clock speed in GHz', dataField: 'speedMin' },
+                { description: 'Maximum CPU clock speed in GHz (turbo)', dataField: 'speedMax' },
                 { description: 'Hardware virtualization enabled/disabled', dataField: 'virtualization' },
             ],
         },
@@ -367,19 +406,19 @@ const METRICS: MetricDefinition[] = [
             ],
         },
     },
-    // {
-    //     kind: 'simple',
-    //     config: {
-    //         dataType: "dynamic",
-    //         siFunctionName: "fsOpenFiles",
-    //         metricNamePrefix: "machine_fs_open_files",
-    //         metrics: [
-    //             { description: 'Max file descriptors', dataField: 'max' },
-    //             { description: 'Current open files count', dataField: 'allocated' },
-    //             { description: 'Count available', dataField: 'available' },
-    //         ],
-    //     },
-    // },
+    {
+        kind: 'simple',
+        config: {
+            dataType: "dynamic",
+            siFunctionName: "fsOpenFiles",
+            metricNamePrefix: "machine_fs_open_files",
+            metrics: [
+                { description: 'Max file descriptors', dataField: 'max' },
+                { description: 'Current open files count', dataField: 'allocated' },
+                { description: 'Count available', dataField: 'available' },
+            ],
+        },
+    },
     {
         kind: 'simple',
         config: {
@@ -466,7 +505,7 @@ const METRICS: MetricDefinition[] = [
     {
         kind: 'labeled',
         config: {
-            siFunctionName: "os",
+            siFunctionName: "osInfo",
             metricNamePrefix: "machine_os_info",
             description: 'System OS information',
             dataFields: ['platform', 'distro', 'release', 'codename', 'kernel', 'arch', 'hostname', 'fqdn', 'codepage', 'logofile', 'serial', 'build', 'uefi'],

@@ -1,4 +1,4 @@
-import si from 'systeminformation';
+import si, { mem } from 'systeminformation';
 
 // async function run() {
 //   // Capture CPU load before
@@ -18,5 +18,61 @@ import si from 'systeminformation';
 // }
 // run();
 
-const test = await si.getAllData();
-console.log(test.disksIO);
+
+
+
+const allDataKey = {
+    version: "*",
+    system: "*",
+    bios: "*",
+    baseboard: "*",
+    chassis: "*",
+    os: "*",
+    uuid: "*",
+    versions: "*",
+    cpu: "*",
+    graphics: "*",
+    net: "*",
+    memLayout: "*",
+    diskLayout: "*",
+    blockDevices: "*",
+    usb: "*", 
+    time: "*", 
+    node: "*", 
+    v8: "*", 
+    cpuCurrentSpeed: "*", 
+    battery: "*", 
+    services: "*", 
+    wifiNetworks: "*", 
+    currentLoad: "*", 
+    mem: "*", 
+    networkConnections: "*", 
+    fsSize: "*", 
+    disksIO: "*", 
+    networkStats: "*", 
+    users: "*", 
+    fsStats: "*", 
+    temp: "*", 
+    processes: "*", 
+    inetLatency: "*"
+};
+
+
+const test3 = await si.get({
+    "fsOpenFiles": "*"
+});
+
+console.log(test3);
+
+
+(async () => {
+    // Measure si.get(allDataKey)
+    console.time("si.get(allDataKey)");
+    const test2 = await si.get(allDataKey);
+    console.timeEnd("si.get(allDataKey)");
+
+    // Measure si.getAllData()
+    console.time("si.getAllData");
+    const allData = await si.getAllData();
+    console.timeEnd("si.getAllData");
+})();
