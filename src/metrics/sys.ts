@@ -13,44 +13,27 @@ import type {
 } from './metric.model';
 
 
-/** Cache: siFunctionName -> last result. Written by prefetcher, read by gauge collect(). */
-const dataCache = new Map<string, unknown>();
+/** Cache: result of si.getAllData(). One fresh snapshot; all gauges read from it. */
+let dataCache: Record<string, unknown> = {};
 
-function getCachedDynamicData(siFunctionName: string): unknown {
-    return dataCache.get(siFunctionName) ?? null;
+function getCachedData(siFunctionName: string): unknown {
+    return dataCache[siFunctionName] ?? null;
 }
 
-/** Collects unique SI function names used by dynamic metrics (simple dynamic + dynamicLabeled). */
-function getDynamicSiSources(definitions: MetricDefinition[]): string[] {
-    const set = new Set<string>();
-    for (const def of definitions) {
-        if (def.kind === 'simple' && def.config.dataType === 'dynamic') {
-            set.add(def.config.siFunctionName);
-        } else if (def.kind === 'dynamicLabeled') {
-            set.add(def.config.siFunctionName);
-        }
-    }
-    return [...set];
-}
-/** Fetches data from the specified SI function and stores it in the dynamic data cache. */
-async function saveCache(siFunctionName: string): Promise<void> {
+/** Fetches all system data once and stores it; all gauges use this cache. */
+async function refreshCache(): Promise<void> {
     try {
-        const result = await (si as any)[siFunctionName]();
-        dataCache.set(siFunctionName, result);
+        const result = await si.getAllData();
+        dataCache = (result as unknown) as Record<string, unknown> ?? {};
+        logger.debug("All-data cache refreshed");
     } catch (err) {
-        logger.error("Prefetch failed for {siFunctionName}: {error}", { siFunctionName, error: err });
+        logger.error("getAllData failed: {error}", { error: err });
     }
 }
 
-/** Pre-fetches all dynamic SI data and refreshes at intervalMs. Call once after METRICS is defined. */
-function refreshCache(definitions: MetricDefinition[], intervalMs: number): void {
-    const sources = getDynamicSiSources(definitions);
-    if (sources.length === 0) return;
-
-    const run = () => Promise.all(sources.map(saveCache));
-
-    run().then(() => logger.debug("Initial dynamic metrics prefetch done"));
-    setInterval(() => run(), intervalMs);
+/** Refreshes the all-data cache at intervalMs. Call once after METRICS is defined. */
+function startCacheRefresh(intervalMs: number): void {
+    setInterval(() => refreshCache(), intervalMs);
 }
 
 /** Converts a value from systeminformation to a numeric gauge value (number, boolean→0/1, else NaN). */
@@ -75,7 +58,12 @@ async function registerSimpleGauges(register: client.Registry, metrics: MetricsC
         const siFuncName = metrics.siFunctionName;
         const metricNamePrefix = metrics.metricNamePrefix;
         const metricList = metrics.metrics;
-        const siResultObj = await (si as any)[siFuncName]();
+        const siResultObj = getCachedData(siFuncName) as Record<string, unknown> | null;
+
+        if (siResultObj == null) {
+            logger.error("No cached data for {siFuncName} when registering simple gauges", { siFuncName });
+            return;
+        }
 
         metricList.forEach(({ description, dataField }) => {
 
@@ -96,14 +84,12 @@ async function registerSimpleGauges(register: client.Registry, metrics: MetricsC
                     collect() {
                         try {
                             this.reset();
-                            const cached = getCachedDynamicData(siFuncName);
+                            const cached = getCachedData(siFuncName);
                             if (cached == null) {
                                 this.set(NaN);
                                 return;
                             }
                             const siResultObjInner = cached as Record<string, unknown>;
-
-                            const test = toGaugeValue(siResultObjInner[dataField], metricName);
                             this.set(toGaugeValue(siResultObjInner[dataField], metricName));
                         } catch (err) {
                             this.reset();
@@ -129,7 +115,12 @@ async function registerLabeledGauge(register: client.Registry, labelMetrics: Lab
         const description = labelMetrics.description;
         const metricNamePrefix = labelMetrics.metricNamePrefix;
         const resultObject = labelMetrics?.resultObject;
-        const siResultObj = resultObject ? (await (si as any)[siFuncName]())[resultObject] : await (si as any)[siFuncName]();
+        const raw = getCachedData(siFuncName) as Record<string, unknown> | null;
+        if (raw == null) {
+            logger.error("No cached data for {siFuncName} when registering labeled gauge", { siFuncName });
+            return;
+        }
+        const siResultObj = resultObject ? (raw[resultObject] as Record<string, unknown>) : raw;
 
         if (Array.isArray(siResultObj)) {
             siResultObj.forEach((itemObj: Record<string, any>, index: number) => {
@@ -143,7 +134,7 @@ async function registerLabeledGauge(register: client.Registry, labelMetrics: Lab
 
                 const vals = Object.fromEntries(
                     labelMetrics.dataFields.map((fieldName) => [fieldName, itemObj[fieldName]])
-                );
+                ) as Partial<Record<string, string | number>>;
                 gauge.set(vals, 1);
 
             });
@@ -158,7 +149,7 @@ async function registerLabeledGauge(register: client.Registry, labelMetrics: Lab
             try {
                 const vals = Object.fromEntries(
                     labelMetrics.dataFields.map((fieldName) => [fieldName, siResultObj[fieldName]])
-                );
+                ) as Partial<Record<string, string | number>>;
                 gauge.set(vals, 1);
             } catch (err) {
                 logger.error("Error collecting {prefix}: {error}", { prefix: metricNamePrefix, error: err });
@@ -207,7 +198,7 @@ async function registerDynamicLabeledGauges(
             collect() {
                 try {
                     this.reset();
-                    const cached = getCachedDynamicData(siFunctionName);
+                    const cached = getCachedData(siFunctionName);
                     if (cached == null) {
                         errorGauge.set(1);
                         return;
@@ -242,6 +233,7 @@ async function registerDynamicLabeledGauges(
 
 /** Single ordered list of all metric definitions to register. */
 const METRICS: MetricDefinition[] = [
+
     // Simple (non-labeled) gauges
     {
         kind: 'simple',
@@ -263,8 +255,8 @@ const METRICS: MetricDefinition[] = [
             metricNamePrefix: "machine_cpu",
             metrics: [
                 { description: 'Current CPU clock speed in GHz', dataField: 'speed' },
-                { description: 'Minimum CPU clock speed in GHz', dataField: 'speedMin' },
-                { description: 'Maximum CPU clock speed in GHz (turbo)', dataField: 'speedMax' },
+                // { description: 'Minimum CPU clock speed in GHz', dataField: 'speedMin' },
+                // { description: 'Maximum CPU clock speed in GHz (turbo)', dataField: 'speedMax' },
                 { description: 'Hardware virtualization enabled/disabled', dataField: 'virtualization' },
             ],
         },
@@ -361,33 +353,33 @@ const METRICS: MetricDefinition[] = [
     {
         kind: 'simple',
         config: {
-            dataType: "static",
+            dataType: "dynamic",
             siFunctionName: "disksIO",
             metricNamePrefix: "machine_disksio",
             metrics: [
                 { description: 'Read IOs on all mounted devices', dataField: 'rIO' },
                 { description: 'Write IOs on all mounted devices', dataField: 'wIO' },
                 { description: 'total IOs on all mounted devices', dataField: 'tIO' },
-                // { description: 'Read IO per seconds', dataField: 'rIO_sec' }, //'object' null
+                { description: 'Read IO per seconds', dataField: 'rIO_sec' }, //'object' null
                 { description: 'Write IO per seconds', dataField: 'wIO_sec' },
                 { description: 'total IO per seconds', dataField: 'tIO_sec' },
                 { description: 'IO internal length in milliseconds', dataField: 'ms' },
             ],
         },
     },
-    {
-        kind: 'simple',
-        config: {
-            dataType: "dynamic",
-            siFunctionName: "fsOpenFiles",
-            metricNamePrefix: "machine_fs_open_files",
-            metrics: [
-                { description: 'Max file descriptors', dataField: 'max' },
-                { description: 'Current open files count', dataField: 'allocated' },
-                { description: 'Count available', dataField: 'available' },
-            ],
-        },
-    },
+    // {
+    //     kind: 'simple',
+    //     config: {
+    //         dataType: "dynamic",
+    //         siFunctionName: "fsOpenFiles",
+    //         metricNamePrefix: "machine_fs_open_files",
+    //         metrics: [
+    //             { description: 'Max file descriptors', dataField: 'max' },
+    //             { description: 'Current open files count', dataField: 'allocated' },
+    //             { description: 'Count available', dataField: 'available' },
+    //         ],
+    //     },
+    // },
     {
         kind: 'simple',
         config: {
@@ -455,16 +447,8 @@ const METRICS: MetricDefinition[] = [
     {
         kind: 'labeled',
         config: {
-            siFunctionName: "cpuTemperature",
-            metricNamePrefix: "machine_cpu_core_temperature",
-            description: 'CPU core temperatures in °C',
-            dataFields: ['cores'],
-        },
-    },
-    {
-        kind: 'labeled',
-        config: {
-            siFunctionName: "cpuCache",
+            siFunctionName: "cpu",
+            resultObject: "cache",
             metricNamePrefix: "machine_cpu_cache",
             description: 'System cpu cache in bytes',
             dataFields: ['l1d', 'l1i', 'l2', 'l3'],
@@ -482,7 +466,7 @@ const METRICS: MetricDefinition[] = [
     {
         kind: 'labeled',
         config: {
-            siFunctionName: "osInfo",
+            siFunctionName: "os",
             metricNamePrefix: "machine_os_info",
             description: 'System OS information',
             dataFields: ['platform', 'distro', 'release', 'codename', 'kernel', 'arch', 'hostname', 'fqdn', 'codepage', 'logofile', 'serial', 'build', 'uefi'],
@@ -525,14 +509,23 @@ const METRICS: MetricDefinition[] = [
             dataFields: ['name', 'type', 'mount', 'size', 'physical', 'uuid', 'label', 'model', 'serial', 'removable', 'protocol', 'device'],
         },
     },
+    {
+        kind: 'labeled',
+        config: {
+            siFunctionName: "versions",
+            metricNamePrefix: "machine_app_versions",
+            description: 'Version information (kernel, ssl, node, ...)',
+            dataFields: ["kernel", "apache", "bash", "bun", "deno", "docker", "dotnet", "fish", "gcc", "git", "grunt", "gulp", "homebrew", "java", "mongodb", "mysql", "nginx", "node", "npm", "openssl", "perl", "php", "pip3", "pip", "pm2", "postfix", "postgresql", "powershell", "python3", "python", "redis", "systemOpenssl", "systemOpensslLib", "tsc", "v8", "virtualbox", "yarn", "zsh"],
+        },
+    },
     // Dynamic labeled gauges (array-returning SI methods)
     {
         kind: 'dynamicLabeled',
         config: {
             siFunctionName: "networkInterfaces",
             metricNamePrefix: "machine_network_interfaces",
-            labelNames: ["iface", "ifaceName", "mac", "internal", "virtual", "mtu", "type", "duplex", "speed"],
-            valueFields: ["default", "ip4", "ip4subnet", "ip6", "ip6subnet", "operstate", "dhcp", "dnsSuffix", "ieee8021xAuth", "ieee8021xState", "carrierChanges"],
+            labelNames: ["iface", "ifaceName", "mac", "internal", "virtual", "mtu", "type", "duplex", "speed", "ieee8021xAuth", "ieee8021xState", "ip4subnet", "ip6subnet", "dnsSuffix", "ip4", "ip6"],
+            valueFields: ["default", "dhcp", "carrierChanges", "operstate"],
         },
     },
     {
@@ -549,8 +542,17 @@ const METRICS: MetricDefinition[] = [
         config: {
             siFunctionName: "users",
             metricNamePrefix: "machine_users",
-            labelNames: ["user"],
-            valueFields: ["tty", "date", "time", "ip", "command"],
+            labelNames: ["user", "date", "ip", "command", "tty",],
+            valueFields: ["time"],
+        },
+    },
+    {
+        kind: 'dynamicLabeled',
+        config: {
+            siFunctionName: "fsSize",
+            metricNamePrefix: "machine_fs_size",
+            labelNames: ["fs", "type", "size", "mount", "rw"],
+            valueFields: ["used", "available", "use"],
         },
     },
     {
@@ -558,24 +560,42 @@ const METRICS: MetricDefinition[] = [
         config: {
             siFunctionName: "processes",
             resultObject: "list",
-            metricNamePrefix: "machine_process_info",
-            labelNames: ["pid", "name"],
-            valueFields: ["parentPid", "cpu", "mem", "priority", "memVsz", "memRss", "nice", "started", "state"],
+            metricNamePrefix: "machine_processes_list",
+            labelNames: ["pid", "name", "parentPid", "started", "state", "tty", "user", "command", "path"],
+            valueFields: ["cpu", "mem", "priority", "memVsz", "nice"],
         },
     },
-
-    // {
-    //     kind: 'dynamicLabeled',
-    //     config: {
-    //         siFunctionName: "dockerInfo",
-    //         metricNamePrefix: "machine_docker",
-    //         labelNames: ["id", "driver"],
-    //         valueFields: ["containers", "containersRunning", "containersPaused", "containersStopped", "images", "memoryLimit", "swapLimit", "cpuCfsPeriod", "cpuCfsQuota"],
-    //     },
-    // },
+    {
+        kind: 'dynamicLabeled',
+        config: {
+            siFunctionName: "usb",
+            metricNamePrefix: "machine_usb",
+            labelNames: ["bus", "deviceId", "id", "name", "type", "removable", "vendor", "manufacturer", "maxPower", "serialNumber"],
+            valueFields: ["default"],
+        },
+    },
+    {
+        kind: 'dynamicLabeled',
+        config: {
+            siFunctionName: "networkConnections",
+            metricNamePrefix: "machine_network_connections",
+            labelNames: ["protocol", "localAddress", "peerAddress", "peerPort", "pid", "process"],
+            valueFields: ["state"],
+        },
+    },
+    {
+        kind: 'dynamicLabeled',
+        config: {
+            siFunctionName: "wifiNetworks",
+            metricNamePrefix: "machine_wifi_network",
+            labelNames: ["ssid", "bssid", "mode", "channel", "frequency", "signalLevel"],
+            valueFields: ["quality"],
+        },
+    },
 ];
 
 export async function registerSysMetrics(register: client.Registry) {
+    await refreshCache();
     for (const def of METRICS) {
         switch (def.kind) {
             case 'simple':
@@ -589,5 +609,5 @@ export async function registerSysMetrics(register: client.Registry) {
                 break;
         }
     }
-    refreshCache(METRICS, COLLECT_INTERVAL_MS);
+    startCacheRefresh(COLLECT_INTERVAL_MS);
 }

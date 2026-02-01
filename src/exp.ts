@@ -1,31 +1,22 @@
-
-
-
-// date: "2026-01-30",
-// time: "20:50"
-const testCase: string = "2026-01-30";
-const testCase2: string = "20:50";
-
-
-function extractNumbers(str: string): number {
-  // Remove all non-digit characters
-  const digitsOnly = str.replace(/\D/g, "");
-  
-  // Convert to number
-  return digitsOnly.length > 0 ? Number(digitsOnly) : NaN;
-}
-
-// Examples
-console.log(extractNumbers(testCase));   // 123
-console.log(extractNumbers(testCase2)); // 4567 (decimal removed)
-
 import si from 'systeminformation';
 
-const data = await si.processes();
-console.log("--")
-console.error(data.list[0]);
+// async function run() {
+//   // Capture CPU load before
+//   const loadBefore = await si.currentLoad();
 
+//   const t1 = performance.now();
+//   const allData = await si.getAllData();
+//   const t2 = performance.now();
 
-const data2 = await si.fsStats();
-console.log("--")
-console.log(data2)
+//   // Capture CPU load after
+//   const loadAfter = await si.currentLoad();
+
+//   console.log(`Call to getAllData took ${(t2 - t1).toFixed(2)} ms`);
+
+//   console.log("CPU usage before:", loadBefore.currentLoad.toFixed(2) + "%");
+//   console.log("CPU usage after:", loadAfter.currentLoad.toFixed(2) + "%");
+// }
+// run();
+
+const test = await si.getAllData();
+console.log(test.disksIO);

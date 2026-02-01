@@ -6,10 +6,34 @@ const dateTimePattern = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/; // YYYY-MM-DD H
 
 const PROCESSES_STATUS_MAP: Record<string, number> = {
   running: 1,
-  blocked: 2,
-  sleeping: 3,
-  zombie: 4
+  sleeping: 2,
+  waiting: 3,
+  zombie: 4,
+  stopped: 5,
+  paging: 6,
+  unknown: 7
 };
+
+const OPERSTATE_STATUS_MAP: Record<string, number> = {
+  up: 1,
+  down: 0,
+  unknown: 2
+};
+
+const NETWORK_CONNECTION_STATE:  Record<string, number> = {
+  established: 1,
+  syn_sent: 2,
+  syn_recv: 3,
+  fin_wait1: 4,
+  fin_wait2: 5,
+  time_wait: 6,
+  close: 7,
+  close_wait: 8,
+  last_ack: 9,
+  listen: 10,
+  close_req: 11,
+  none: 12
+}
 
 export function parseStrToNumber(str: string): number {
 
@@ -30,6 +54,14 @@ export function parseStrToNumber(str: string): number {
 
   if (s in PROCESSES_STATUS_MAP) {
     return PROCESSES_STATUS_MAP[s] as number;
+  }
+
+  if (s in OPERSTATE_STATUS_MAP){
+    return OPERSTATE_STATUS_MAP[s] as number;
+  }
+
+  if (s in NETWORK_CONNECTION_STATE){
+    return NETWORK_CONNECTION_STATE[s] as number;
   }
 
   return NaN;

@@ -6,8 +6,7 @@
 export const isProduction = process.env.NODE_ENV === "production";
 
 /** Interval in ms for pre-fetching dynamic data. */
-export const COLLECT_INTERVAL_MS =  Number(process.env.METRICS_COLLECT_INTERVAL_MS) || 10_000;
-
+export const COLLECT_INTERVAL_MS = Number(process.env.METRICS_COLLECT_INTERVAL_MS) || 5_000;
 
 /**
  * Bun
