@@ -57,7 +57,7 @@ function refreshCache(definitions: MetricDefinition[], intervalMs: number): void
 function toGaugeValue(val: unknown, metricName: string): number {
     if (typeof val === 'number' && !Number.isNaN(val)) return val;
     if (typeof val === 'boolean') return val ? 1 : 0;
-    if (typeof val === 'string' && val !== ""){
+    if (typeof val === 'string' && val !== "") {
         const parsed = parseStrToNumber(val);
         if (!Number.isNaN(parsed)) return parsed;
     }
@@ -102,10 +102,12 @@ async function registerSimpleGauges(register: client.Registry, metrics: MetricsC
                                 return;
                             }
                             const siResultObjInner = cached as Record<string, unknown>;
+
+                            const test = toGaugeValue(siResultObjInner[dataField], metricName);
                             this.set(toGaugeValue(siResultObjInner[dataField], metricName));
                         } catch (err) {
                             this.reset();
-                            logger.error("Error collecting {metricName}: {error}", { metricName, error: err });
+                            logger.error("Error collecting {metricName}{dataField}: {error}", { metricName, dataField, error: err });
                             this.set(NaN);
                         }
                     },
@@ -180,10 +182,11 @@ async function registerDynamicLabeledGauges(
 ) {
     const {
         siFunctionName,
+        resultObject,
         metricNamePrefix,
         labelNames,
         valueFields,
-        description = "System information value",
+        description = `System information ${metricNamePrefix} value`,
         collectErrorLabel = `${metricNamePrefix}_collect_error`,
     } = config;
 
@@ -203,13 +206,17 @@ async function registerDynamicLabeledGauges(
             registers: [register],
             collect() {
                 try {
+                    this.reset();
                     const cached = getCachedDynamicData(siFunctionName);
                     if (cached == null) {
                         errorGauge.set(1);
                         return;
                     }
                     errorGauge.set(0);
-                    const data = cached as unknown;
+                    const rawData = cached as unknown;
+                    const data = resultObject
+                        ? (rawData as Record<string, unknown>)[resultObject]
+                        : rawData;
                     const items = Array.isArray(data) ? data : [data];
 
                     items.forEach((item: Record<string, unknown>) => {
@@ -217,7 +224,7 @@ async function registerDynamicLabeledGauges(
                         labelNames.forEach((label) => {
                             labels[label] = String(item[label] ?? '');
                         });
-                        const value = Number(item[field]);
+                        const value = toGaugeValue(item[field], gaugeName);
                         if (!Number.isNaN(value)) {
                             this.set(labels, value);
                         }
@@ -311,6 +318,38 @@ const METRICS: MetricDefinition[] = [
         kind: 'simple',
         config: {
             dataType: "dynamic",
+            siFunctionName: "processes",
+            metricNamePrefix: "machine_processes",
+            metrics: [
+                { description: 'Total number of processes', dataField: 'all' },
+                { description: 'Total number of running processes', dataField: 'running' },
+                { description: 'Total number of processes blocked', dataField: 'blocked' },
+                { description: 'Total number of processes sleeping', dataField: 'sleeping' }
+            ],
+        },
+    },
+    {
+        kind: 'simple',
+        config: {
+            dataType: "dynamic",
+            siFunctionName: "currentLoad",
+            metricNamePrefix: "machine_cpu_load",
+            metrics: [
+                { description: 'CPU average load', dataField: 'avgLoad' },
+                { description: 'CPU load in %', dataField: 'currentLoad' },
+                { description: 'CPU load user in %', dataField: 'currentLoadUser' },
+                { description: 'CPU load system in %', dataField: 'currentLoadSystem' },
+                { description: 'CPU load nice in %', dataField: 'currentLoadNice' },
+                { description: 'CPU load idle in %', dataField: 'currentLoadIdle' },
+                { description: 'CPU load system in %', dataField: 'currentLoadIrq' },
+                { description: 'CPU load raw values (ticks)', dataField: 'rawCurrentLoad' }
+            ],
+        }
+    },
+    {
+        kind: 'simple',
+        config: {
+            dataType: "dynamic",
             siFunctionName: "battery",
             metricNamePrefix: "machine_battery",
             metrics: [
@@ -330,8 +369,8 @@ const METRICS: MetricDefinition[] = [
                 { description: 'Write IOs on all mounted devices', dataField: 'wIO' },
                 { description: 'total IOs on all mounted devices', dataField: 'tIO' },
                 // { description: 'Read IO per seconds', dataField: 'rIO_sec' }, //'object' null
-                // { description: 'Write IO per seconds', dataField: 'wIO_sec' },
-                // { description: 'total IO per seconds', dataField: 'tIO_sec' },
+                { description: 'Write IO per seconds', dataField: 'wIO_sec' },
+                { description: 'total IO per seconds', dataField: 'tIO_sec' },
                 { description: 'IO internal length in milliseconds', dataField: 'ms' },
             ],
         },
@@ -358,7 +397,7 @@ const METRICS: MetricDefinition[] = [
             metrics: [
                 { description: 'Bytes read since startup', dataField: 'rx' },
                 { description: 'Bytes written since startup', dataField: 'wx' },
-                { description: 'Total bytes read + written since startup', dataField: '	tx' },
+                { description: 'Total bytes read + written since startup', dataField: 'tx' },
                 { description: 'Bytes read / second', dataField: 'rx_sec' },
                 { description: 'Bytes written / second', dataField: 'wx_sec' },
                 { description: 'total bytes reads + written / second', dataField: 'tx_sec' },
@@ -366,6 +405,7 @@ const METRICS: MetricDefinition[] = [
             ],
         },
     },
+
     // Labeled gauges
     {
         kind: 'labeled',
@@ -503,7 +543,7 @@ const METRICS: MetricDefinition[] = [
             labelNames: ["iface"],
             valueFields: ["operstate", "rx_bytes", "rx_dropped", "rx_errors", "tx_bytes", "tx_dropped", "tx_errors", "rx_sec", "tx_sec", "ms"],
         },
-    }, 
+    },
     {
         kind: 'dynamicLabeled',
         config: {
@@ -513,6 +553,17 @@ const METRICS: MetricDefinition[] = [
             valueFields: ["tty", "date", "time", "ip", "command"],
         },
     },
+    {
+        kind: 'dynamicLabeled',
+        config: {
+            siFunctionName: "processes",
+            resultObject: "list",
+            metricNamePrefix: "machine_process_info",
+            labelNames: ["pid", "name"],
+            valueFields: ["parentPid", "cpu", "mem", "priority", "memVsz", "memRss", "nice", "started", "state"],
+        },
+    },
+
     // {
     //     kind: 'dynamicLabeled',
     //     config: {

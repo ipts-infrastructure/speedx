@@ -2,6 +2,9 @@
  * Exporter
  */
 
+/** Whether the app is running in production (NODE_ENV === "production"). */
+export const isProduction = process.env.NODE_ENV === "production";
+
 /** Interval in ms for pre-fetching dynamic data. */
 export const COLLECT_INTERVAL_MS =  Number(process.env.METRICS_COLLECT_INTERVAL_MS) || 10_000;
 

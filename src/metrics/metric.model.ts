@@ -24,6 +24,7 @@ export interface LabeledMetricsConfig {
 /** Config for dynamic labeled gauges (array-returning SI calls, one gauge per value field). */
 export interface DynamicLabeledGaugesConfig {
     siFunctionName: string;
+    resultObject?: string; // optional: key to drill into when SI returns an object (e.g. graphics().controllers)
     metricNamePrefix: string;
     labelNames: string[];
     valueFields: string[];

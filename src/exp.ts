@@ -21,6 +21,11 @@ console.log(extractNumbers(testCase2)); // 4567 (decimal removed)
 
 import si from 'systeminformation';
 
-const data = await si.fsStats();
-console.log(data);
+const data = await si.processes();
+console.log("--")
+console.error(data.list[0]);
 
+
+const data2 = await si.fsStats();
+console.log("--")
+console.log(data2)
