@@ -1,5 +1,3 @@
-import { logger } from '../utils/logger';
-
 const datePattern = /^\d{4}-\d{2}-\d{2}$/; // YYYY-MM-DD 
 const timePattern = /^\d{2}:\d{2}$/; // HH:mm
 const dateTimePattern = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/; // YYYY-MM-DD HH:mm:ss
