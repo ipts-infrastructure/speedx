@@ -59,7 +59,7 @@ A system metrics exporter built with Bun that collects and exports comprehensive
 
 - `--port`: HTTP server port (default: 8872)
 - `--ci`: Metrics collection interval in ms (default: 5000)
-- `--logPath`: Log file path (default: /var/log/speedx.log)
+- `--logPath`: Log file path (default: /var/log/hkt_exporter.log)
 - `--logMaxSize`: Max log file size in bytes (default: 5242880)
 
 ## Exported Metrics
