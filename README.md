@@ -28,6 +28,12 @@ A system metrics exporter built with Bun that collects and exports comprehensive
    ```bash
    # Compile to binary
    bun build --compile --target=bun-darwin-arm64 ./src/index.ts --outfile hkt-prom-exporter
+
+   # Production compile (Linux)
+   bun build --compile --target=bun-linux-x64 --minify --sourcemap ./src/index.ts --outfile hkt-prom-exporter
+
+   # Production compile (Mac OS)
+   bun build --compile --target=bun-darwin-arm64 --minify --sourcemap ./src/index.ts --outfile hkt-prom-exporter
    
    # Install system-wide
    chmod +x ./hkt-prom-exporter
@@ -59,7 +65,7 @@ A system metrics exporter built with Bun that collects and exports comprehensive
 
 - `--port`: HTTP server port (default: 8872)
 - `--ci`: Metrics collection interval in ms (default: 5000)
-- `--logPath`: Log file path (default: /var/log/speedx.log)
+- `--logPath`: Log file path (default: /var/log/hkt_exporter.log)
 - `--logMaxSize`: Max log file size in bytes (default: 5242880)
 
 ## Exported Metrics

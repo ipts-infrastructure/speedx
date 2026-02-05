@@ -4,11 +4,18 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.hkt.exporter</string>
-
+  <string>com.hkt.prom.exporter</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/local/bin/exporter</string>
+    <string>/usr/local/bin/hkt-prom-exporter</string>
+    <string>--port</string>
+    <string>8872</string>
+    <string>--ci</string>
+    <string>5000</string>
+    <string>--logPath</string>
+    <string>/var/log/hkt_exporter.log</string>
+    <string>--logMaxSize</string>
+    <string>5242880</string>
   </array>
 
   <key>RunAtLoad</key>
