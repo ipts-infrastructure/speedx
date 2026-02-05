@@ -28,6 +28,12 @@ A system metrics exporter built with Bun that collects and exports comprehensive
    ```bash
    # Compile to binary
    bun build --compile --target=bun-darwin-arm64 ./src/index.ts --outfile hkt-prom-exporter
+
+   # Production compile (Linux)
+   bun build --compile --target=bun-linux-x64 --minify --sourcemap ./src/index.ts --outfile hkt-prom-exporter
+
+   # Production compile (Mac OS)
+   bun build --compile --target=bun-darwin-arm64 --minify --sourcemap ./src/index.ts --outfile hkt-prom-exporter
    
    # Install system-wide
    chmod +x ./hkt-prom-exporter
