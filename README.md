@@ -40,7 +40,15 @@ A system metrics exporter built with Bun that collects and exports comprehensive
    sudo mv hkt-prom-exporter /usr/local/bin/hkt-prom-exporter
    ```
 
-4. **System Service Setup**
+4. **System Service Setup (User)**
+   
+   ⚠️ **Warning**: Ensure the log file and directory have proper write permissions before loading the service:
+   ```bash
+   sudo mkdir -p /var/log
+   sudo touch /var/log/hkt_exporter.log
+   sudo chown $(whoami) /var/log/hkt_exporter.log
+   ```
+   
    ```bash
    # Copy plist file to LaunchAgents
    cp com.hkt.hkt-prom-exporter.plist ~/Library/LaunchAgents/
@@ -55,7 +63,25 @@ A system metrics exporter built with Bun that collects and exports comprehensive
    launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.hkt.hkt-prom-exporter.plist
    ```
 
-5. **Access Metrics**
+5. **System Service Setup (Root)**
+   ```bash
+   # Copy plist file to LaunchDaemons
+   sudo cp com.hkt.hkt-prom-exporter.plist /Library/LaunchDaemons/
+
+   sudo chown root:wheel /Library/LaunchDaemons/com.hkt.hkt-prom-exporter.plist
+   sudo chmod 644 /Library/LaunchDaemons/com.hkt.hkt-prom-exporter.plist
+   
+   # Validate plist format
+   plutil -lint /Library/LaunchDaemons/com.hkt.hkt-prom-exporter.plist
+   
+   # Load service
+   sudo launchctl load -w /Library/LaunchDaemons/com.hkt.hkt-prom-exporter.plist
+   
+   # Unload service
+   sudo launchctl unload -w /Library/LaunchDaemons/com.hkt.hkt-prom-exporter.plist
+   ```
+
+6. **Access Metrics**
    ```bash
    # View metrics endpoint
    curl http://localhost:8872/metrics
