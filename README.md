@@ -9,6 +9,26 @@ A system metrics exporter built with Bun that collects and exports comprehensive
 
 ## 🛠️ Getting Started
 
+### Install on a Mac to monitor (Apple Silicon)
+
+Downloads the latest release binary and enables a LaunchDaemon (port **28872**). Needs sudo and a reachable public GitHub release.
+
+```bash
+chmod +x ./scripts/install.sh
+./scripts/install.sh
+# ./scripts/install.sh uninstall
+```
+
+Or without cloning:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ipts-infrastructure/speedx/main/scripts/install.sh | bash
+```
+
+Metrics: [http://localhost:28872/metrics](http://localhost:28872/metrics)
+
+### Develop from source
+
 1. **Install Dependencies**
    ```bash
    cd src
@@ -51,22 +71,23 @@ A system metrics exporter built with Bun that collects and exports comprehensive
    
    ```bash
    # Copy plist file to LaunchAgents
-   cp com.hkt.hkt-prom-exporter.plist ~/Library/LaunchAgents/
+   cp com.hkt.exporter.plist ~/Library/LaunchAgents/
    
    # Validate plist format
-   plutil -lint ~/Library/LaunchAgents/com.hkt.hkt-prom-exporter.plist
+   plutil -lint ~/Library/LaunchAgents/com.hkt.exporter.plist
    
    # Load service
-   launchctl load ~/Library/LaunchAgents/com.hkt.hkt-prom-exporter.plist
+   launchctl load ~/Library/LaunchAgents/com.hkt.exporter.plist
    
    # Unload service
-   launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.hkt.hkt-prom-exporter.plist
+   launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.hkt.exporter.plist
    ```
 
 5. **System Service Setup (Root)**
    ```bash
-   # Copy plist file to LaunchDaemons
-   sudo cp com.hkt.hkt-prom-exporter.plist /Library/LaunchDaemons/
+   # Prefer: ./scripts/install.sh
+   # Manual:
+   sudo cp com.hkt.exporter.plist /Library/LaunchDaemons/com.hkt.hkt-prom-exporter.plist
 
    sudo chown root:wheel /Library/LaunchDaemons/com.hkt.hkt-prom-exporter.plist
    sudo chmod 644 /Library/LaunchDaemons/com.hkt.hkt-prom-exporter.plist
@@ -83,7 +104,9 @@ A system metrics exporter built with Bun that collects and exports comprehensive
 
 6. **Access Metrics**
    ```bash
-   # View metrics endpoint
+   # LaunchDaemon (install.sh)
+   curl http://localhost:28872/metrics
+   # bun run (default)
    curl http://localhost:8872/metrics
    ```
 
