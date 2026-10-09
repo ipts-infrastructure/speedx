@@ -11,7 +11,7 @@ A system metrics exporter built with Bun that collects and exports comprehensive
 
 ### Install on a Mac to monitor (Apple Silicon)
 
-Downloads the latest release binary and enables a LaunchDaemon (port **28872**). Needs sudo and a reachable public GitHub release.
+Downloads the latest release binary and enables a LaunchDaemon (port **28872**). Needs sudo, Tailscale, and a reachable public GitHub release. The script curls `/metrics` on this machine's Tailscale IPv4 before it reports success.
 
 ```bash
 chmod +x ./scripts/install.sh
@@ -25,7 +25,7 @@ Or without cloning:
 curl -fsSL https://raw.githubusercontent.com/ipts-infrastructure/speedx/main/scripts/install.sh | bash
 ```
 
-Metrics: [http://localhost:28872/metrics](http://localhost:28872/metrics)
+Metrics: `http://<tailscale-ipv4>:28872/metrics` (also on localhost while testing).
 
 ### Develop from source
 
@@ -104,7 +104,9 @@ Metrics: [http://localhost:28872/metrics](http://localhost:28872/metrics)
 
 6. **Access Metrics**
    ```bash
-   # LaunchDaemon (install.sh)
+   # LaunchDaemon (install.sh) — Tailscale address
+   curl http://$(tailscale ip -4):28872/metrics
+   # same host
    curl http://localhost:28872/metrics
    # bun run (default)
    curl http://localhost:8872/metrics
