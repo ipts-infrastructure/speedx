@@ -124,12 +124,12 @@ Metrics: `http://<tailscale-ipv4>:28872/metrics` (also on localhost while testin
 The exporter provides comprehensive system metrics including:
 
 - **System Info**: Hardware, OS, timezone, UUID information
-- **CPU**: Temperature, load, speed, cache details
+- **CPU**: Temperature (`machine_cpu_temperature_main` / `_max`, Apple Silicon via `macos-temperature-sensor`), load, speed, cache details
 - **Memory**: Usage, swap, layout information
 - **Storage**: Disk I/O, filesystem stats, block devices
 - **Network**: Interface stats, connections, WiFi networks
 - **Processes**: Running processes, system load
-- **Hardware**: Graphics controllers, USB devices, battery status
+- **Hardware**: Graphics controllers, GPU temperature (`machine_graphics_temperatureGpu`), USB devices, battery status
 
 ## 🚨 Troubleshooting
 
@@ -138,6 +138,7 @@ The exporter provides comprehensive system metrics including:
 - **Port in use**: Change port with `--port` option
 - **Log file errors**: Ensure write permissions for log directory
 - **Plist errors**: Validate with `plutil -lint` command
+- **CPU/GPU temperature missing**: Apple Silicon needs `macos-temperature-sensor` (native addon). `Nan` means the addon did not load — run `bun install` in `src/` and restart; a compiled release binary must include that `.node` addon.
 
 ## 🔖 References
 
