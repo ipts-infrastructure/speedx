@@ -4,6 +4,7 @@ import client from 'prom-client';
 import { COLLECT_INTERVAL_MS } from '../configs/config';
 import { logger } from '../utils/logger';
 import { parseStrToNumber } from '../utils/helper';
+import { overlayAppleSiliconTemps } from './macos-temp';
 
 import type {
     MetricsConfig,
@@ -64,6 +65,7 @@ async function refreshCache(): Promise<void> {
         // const result = await si.getAllData();
         const result = await si.get(SI_KEYS);
         dataCache = (result as unknown) as Record<string, unknown> ?? {};
+        overlayAppleSiliconTemps(dataCache);
         logger.debug("All-data cache refreshed");
     } catch (err) {
         logger.error("getAllData failed: {error}", { error: err });
@@ -77,6 +79,7 @@ function startCacheRefresh(intervalMs: number): void {
 
 /** Converts a value from systeminformation to a numeric gauge value (number, boolean→0/1, else NaN). */
 function toGaugeValue(val: unknown, metricName: string): number {
+    if (val == null) return NaN;
     if (typeof val === 'number' && !Number.isNaN(val)) return val;
     if (typeof val === 'boolean') return val ? 1 : 0;
     if (typeof val === 'string' && val !== "") {
@@ -125,15 +128,14 @@ async function registerSimpleGauges(register: client.Registry, metrics: MetricsC
                             this.reset();
                             const cached = getCachedData(siFuncName);
                             if (cached == null) {
-                                this.set(NaN);
                                 return;
                             }
                             const siResultObjInner = cached as Record<string, unknown>;
-                            this.set(toGaugeValue(siResultObjInner[dataField], metricName));
+                            const value = toGaugeValue(siResultObjInner[dataField], metricName);
+                            if (Number.isFinite(value)) this.set(value);
                         } catch (err) {
                             this.reset();
                             logger.error("Error collecting {metricName}{dataField}: {error}", { metricName, dataField, error: err });
-                            this.set(NaN);
                         }
                     },
                 });
@@ -558,6 +560,17 @@ const METRICS: MetricDefinition[] = [
         },
     },
     // Dynamic labeled gauges (array-returning SI methods)
+    {
+        kind: 'dynamicLabeled',
+        config: {
+            siFunctionName: "graphics",
+            resultObject: "controllers",
+            metricNamePrefix: "machine_graphics",
+            labelNames: ["vendor", "model", "bus"],
+            valueFields: ["temperatureGpu"],
+            description: "Graphics controller temperature in °C",
+        },
+    },
     {
         kind: 'dynamicLabeled',
         config: {

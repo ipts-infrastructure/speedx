@@ -14,7 +14,7 @@
     "@logtape/file": "^2.0.2",
     "@logtape/logtape": "^2.0.2",
     "figlet": "^1.10.0",
-    "macos-temperature-sensor": "^1.0.4",
+    "macos-temperature-sensor": "^2.1.1",
     "osx-temperature-sensor": "^1.0.8",
     "prom-client": "^15.1.3",
     "systeminformation": "^5.30.6"
